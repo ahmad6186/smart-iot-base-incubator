@@ -14,6 +14,7 @@ import {
   orderBy,
   limit,
   onSnapshot,
+  setDoc,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -182,6 +183,51 @@ export const subscribeToCollection = (collectionName, callback) => {
 }
 
 /**
+ * Listen to a single document in real time
+ * @param {string} collectionName
+ * @param {string} docId
+ * @param {Function} callback
+ * @returns {Function}
+ */
+export const subscribeToDocument = (collectionName, docId, callback) => {
+  const docRef = doc(db, collectionName, docId)
+  const unsubscribe = onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback({ id: docSnap.id, ...docSnap.data() })
+      } else {
+        callback(null)
+      }
+    },
+    (error) => {
+      console.error('Error listening to document:', error)
+      callback(null, error)
+    }
+  )
+
+  return unsubscribe
+}
+
+/**
+ * Set/overwrite document data
+ * @param {string} collectionName
+ * @param {string} docId
+ * @param {Object} data
+ * @param {boolean} merge
+ * @returns {Promise}
+ */
+export const setDocument = async (collectionName, docId, data, merge = true) => {
+  try {
+    const docRef = doc(db, collectionName, docId)
+    await setDoc(docRef, data, { merge })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
  * Example usage:
  * 
  * // Add a document
@@ -215,4 +261,3 @@ export const subscribeToCollection = (collectionName, callback) => {
  * // Later, to stop listening:
  * unsubscribe()
  */
-

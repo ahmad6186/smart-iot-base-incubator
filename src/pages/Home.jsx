@@ -1,290 +1,402 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import {
   Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Container,
+  Grid,
   Card,
   CardContent,
-  Grid,
-  Avatar,
-  IconButton,
-  Menu,
-  MenuItem,
-  Paper,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+  Snackbar,
+  Alert,
+  Stack,
+  Chip,
+  Divider,
+  CircularProgress,
 } from '@mui/material'
+import ThermostatIcon from '@mui/icons-material/Thermostat'
+import WaterDropIcon from '@mui/icons-material/WaterDrop'
+import FavoriteIcon from '@mui/icons-material/Favorite'
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart'
+import HearingIcon from '@mui/icons-material/Hearing'
+import BabyChangingStationIcon from '@mui/icons-material/BabyChangingStation'
+import WifiTetheringIcon from '@mui/icons-material/WifiTethering'
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import dayjs from 'dayjs'
+import VitalCard from '../components/dashboard/VitalCard'
+import TrendChart from '../components/charts/TrendChart'
+import AlertsPanel from '../components/dashboard/AlertsPanel'
+import ActuatorToggle from '../components/dashboard/ActuatorToggle'
+import SetpointControl from '../components/dashboard/SetpointControl'
+import AiFeatureCard from '../components/dashboard/AiFeatureCard'
+import useIncubatorData from '../hooks/useIncubatorData'
 import {
-  Dashboard as DashboardIcon,
-  Logout as LogoutIcon,
-  Settings as SettingsIcon,
-  AccountCircle as AccountCircleIcon,
-  Home as HomeIcon,
-} from '@mui/icons-material'
-import { onAuthChange, logOut } from '../firebase/auth'
+  updateActuator,
+  updateMode,
+  updateSetpoints,
+} from '../services/incubatorService'
+
+const statusFromRange = (value, range) => {
+  if (!range) return 'normal'
+  const [min, max] = range
+  if (value == null) return 'normal'
+  if (value < min || value > max) {
+    const diff = Math.min(Math.abs(value - min), Math.abs(value - max))
+    return diff > 1 ? 'critical' : 'warning'
+  }
+  return 'normal'
+}
 
 function Home() {
-  const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [anchorEl, setAnchorEl] = useState(null)
+  const { liveData, actuators, settings, alerts, loading } = useIncubatorData()
+  const [modeSaving, setModeSaving] = useState(false)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
-  useEffect(() => {
-    const unsubscribe = onAuthChange((currentUser) => {
-      if (currentUser) {
-        setUser(currentUser)
-      } else {
-        // Redirect to login if not authenticated
-        navigate('/login')
-      }
+  const handleModeChange = async (_, value) => {
+    if (!value || !liveData) return
+    setModeSaving(true)
+    const result = await updateMode(value)
+    setSnackbar({
+      open: true,
+      message: result.success ? `Mode changed to ${value}` : result.error,
+      severity: result.success ? 'success' : 'error',
     })
-
-    return () => unsubscribe()
-  }, [navigate])
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget)
+    setModeSaving(false)
   }
 
-  const handleMenuClose = () => {
-    setAnchorEl(null)
+  const handleActuatorChange = async (name, value) => {
+    if (!actuators) return
+    const result = await updateActuator(name, value)
+    setSnackbar({
+      open: true,
+      message: result.success ? `${name} updated` : result.error,
+      severity: result.success ? 'success' : 'error',
+    })
   }
 
-  const handleLogout = async () => {
-    await logOut()
-    handleMenuClose()
-    navigate('/login')
+  const handleSetpointChange = async (field, value) => {
+    if (!settings) return
+    const result = await updateSetpoints({ [field]: Number(value) })
+    setSnackbar({
+      open: true,
+      message: result.success ? `${field} setpoint saved` : result.error,
+      severity: result.success ? 'success' : 'error',
+    })
   }
 
-  if (!user) {
-    return null // Or a loading spinner
+  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false })
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    )
   }
+
+  const safeRanges = settings?.safeRanges || {}
+  const connectionStatus = liveData?.connectionStatus || 'Offline'
+  const lastUpdatedText = liveData?.lastUpdated
+    ? dayjs(liveData.lastUpdated).format('MMM D, HH:mm:ss')
+    : 'Awaiting telemetry from AWS'
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* App Bar */}
-      <AppBar
-        position="sticky"
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Card
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(255,255,255,0.9) 100%)',
         }}
       >
-        <Toolbar>
-          <DashboardIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Smart IoT Base Incubator
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              {user.displayName || user.email}
+        <CardContent>
+          <Stack spacing={1}>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              NICU Control Center
             </Typography>
-            <IconButton
-              size="large"
-              edge="end"
-              onClick={handleMenuOpen}
-              color="inherit"
-            >
-              <AccountCircleIcon />
-            </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleMenuClose}>
-                <SettingsIcon sx={{ mr: 1 }} />
-                Settings
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                <LogoutIcon sx={{ mr: 1 }} />
-                Logout
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      {/* Main Content */}
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {/* Welcome Section */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            mb: 4,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: 3,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar
-              sx={{
-                width: 64,
-                height: 64,
-                bgcolor: 'rgba(255, 255, 255, 0.2)',
-              }}
-            >
-              <HomeIcon sx={{ fontSize: 32 }} />
-            </Avatar>
-            <Box>
-              <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-                Welcome back, {user.displayName || user.email?.split('@')[0]}!
+            <Typography variant="body1" color="text.secondary">
+              Monitoring incubator health, environment, and AI assisted safety in real time.
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Chip
+                icon={<WifiTetheringIcon />}
+                label={`Device ${connectionStatus}`}
+                color={connectionStatus === 'Online' ? 'success' : 'warning'}
+              />
+              <Chip
+                icon={<NotificationsActiveIcon />}
+                label={`Alerts today: ${alerts.length}`}
+                color="secondary"
+                variant="outlined"
+              />
+              <Typography variant="body2" color="text.secondary">
+                {lastUpdatedText}
               </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Manage your IoT devices and monitor your incubator from here.
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+      {!liveData && (
+        <Alert severity="info" variant="outlined">
+          No live incubator telemetry yet. Connect your AWS data pipeline to start streaming vitals.
+        </Alert>
+      )}
 
-        {/* Dashboard Cards */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
-            <Card
-              sx={{
-                height: '100%',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                    <DashboardIcon />
-                  </Avatar>
-                  <Typography variant="h6" component="div">
-                    Devices
-                  </Typography>
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  0
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Connected IoT devices
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <Card
-              sx={{
-                height: '100%',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
-                    <HomeIcon />
-                  </Avatar>
-                  <Typography variant="h6" component="div">
-                    Status
-                  </Typography>
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  Active
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  System is running
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <Card
-              sx={{
-                height: '100%',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
-                    <SettingsIcon />
-                  </Avatar>
-                  <Typography variant="h6" component="div">
-                    Settings
-                  </Typography>
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                  Ready
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Configure your system
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <VitalCard
+            title="Temperature"
+            value={liveData?.temperature}
+            unit="°C"
+            status={statusFromRange(liveData?.temperature, safeRanges.temperature)}
+            icon={<ThermostatIcon fontSize="large" />}
+            footer="Core incubator temperature"
+            min={safeRanges.temperature?.[0]}
+            max={safeRanges.temperature?.[1]}
+          />
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <VitalCard
+            title="Humidity"
+            value={liveData?.humidity}
+            unit="%"
+            status={statusFromRange(liveData?.humidity, safeRanges.humidity)}
+            icon={<WaterDropIcon fontSize="large" />}
+            footer="Relative humidity"
+            min={safeRanges.humidity?.[0]}
+            max={safeRanges.humidity?.[1]}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <VitalCard
+            title="SpO₂"
+            value={liveData?.spo2}
+            unit="%"
+            status={statusFromRange(liveData?.spo2, safeRanges.spo2)}
+            icon={<FavoriteIcon fontSize="large" />}
+            footer="Peripheral oxygen saturation"
+            min={safeRanges.spo2?.[0]}
+            max={safeRanges.spo2?.[1]}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <VitalCard
+            title="Heart Rate"
+            value={liveData?.heartRate}
+            unit="bpm"
+            status={statusFromRange(liveData?.heartRate, safeRanges.heartRate)}
+            icon={<MonitorHeartIcon fontSize="large" />}
+            footer="Infant heart rate"
+            min={safeRanges.heartRate?.[0]}
+            max={safeRanges.heartRate?.[1]}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <VitalCard
+            title="System Status"
+            value={connectionStatus}
+            status={connectionStatus === 'Online' ? 'normal' : 'critical'}
+            icon={<WifiTetheringIcon fontSize="large" />}
+            footer={`Mode: ${liveData?.mode || 'Unknown'}`}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <VitalCard
+            title="Noise Level"
+            value={liveData?.noise}
+            unit="dB"
+            status="normal"
+            icon={<HearingIcon fontSize="large" />}
+            footer="Ambient NICU noise"
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <VitalCard
+            title="Cry Detection"
+            value={liveData?.cryStatus}
+            status={liveData?.cryStatus === 'Crying' ? 'warning' : 'normal'}
+            icon={<BabyChangingStationIcon fontSize="large" />}
+            footer="AI powered cry analysis"
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <VitalCard
+            title="Baby Presence"
+            value={liveData?.presenceStatus}
+            status={liveData?.presenceStatus === 'Absent' ? 'critical' : 'normal'}
+            icon={<BabyChangingStationIcon fontSize="large" />}
+            footer="Computer vision occupancy"
+          />
+        </Grid>
+      </Grid>
 
-        {/* Quick Actions */}
-        <Paper elevation={2} sx={{ mt: 4, p: 3, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-            Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<DashboardIcon />}
-                sx={{ py: 1.5 }}
-              >
-                Add Device
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<SettingsIcon />}
-                sx={{ py: 1.5 }}
-              >
-                Configure
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<HomeIcon />}
-                sx={{ py: 1.5 }}
-              >
-                View Reports
-              </Button>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<AccountCircleIcon />}
-                sx={{ py: 1.5 }}
-              >
-                Profile
-              </Button>
-            </Grid>
-          </Grid>
-        </Paper>
-      </Container>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <TrendChart title="Temperature Trend" data={liveData?.temperatureTrend || []} unit="°C" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TrendChart title="Humidity Trend" data={liveData?.humidityTrend || []} unit="%" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TrendChart title="SpO₂ Trend" data={liveData?.spo2Trend || []} unit="%" />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TrendChart title="Heart Rate Trend" data={liveData?.heartRateTrend || []} unit="bpm" />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6">Mode & Controls</Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  value={liveData?.mode ?? null}
+                  onChange={handleModeChange}
+                  size="small"
+                >
+                  <ToggleButton value="Auto" disabled={modeSaving || !liveData}>
+                    Auto
+                  </ToggleButton>
+                  <ToggleButton value="Manual" disabled={modeSaving || !liveData}>
+                    Manual
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                <Divider />
+                <Stack spacing={2}>
+                  <ActuatorToggle
+                    label="Heater"
+                    value={actuators?.heater}
+                    onChange={(value) => handleActuatorChange('heater', value)}
+                    description="Maintain thermal comfort"
+                    disabled={!actuators}
+                  />
+                  <ActuatorToggle
+                    label="Fan"
+                    value={actuators?.fan}
+                    onChange={(value) => handleActuatorChange('fan', value)}
+                    description="Air circulation"
+                    disabled={!actuators}
+                  />
+                  <ActuatorToggle
+                    label="Humidifier"
+                    value={actuators?.humidifier}
+                    onChange={(value) => handleActuatorChange('humidifier', value)}
+                    description="Humidity regulation"
+                    disabled={!actuators}
+                  />
+                  <ActuatorToggle
+                    label="Buzzer"
+                    value={actuators?.buzzer}
+                    onChange={(value) => handleActuatorChange('buzzer', value)}
+                    description="Nurse alerts"
+                    disabled={!actuators}
+                  />
+                  <ActuatorToggle
+                    label="Light"
+                    value={actuators?.light}
+                    onChange={(value) => handleActuatorChange('light', value)}
+                    description="Observation lighting"
+                    disabled={!actuators}
+                  />
+                  {!actuators && (
+                    <Typography variant="caption" color="text.secondary">
+                      Waiting for actuator state from AWS controller.
+                    </Typography>
+                  )}
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6">Setpoints</Typography>
+                {settings ? (
+                  <>
+                    <SetpointControl
+                      label="Temperature"
+                      unit="°C"
+                      value={settings?.temperatureSetpoint}
+                      range={safeRanges.temperature || [0, 100]}
+                      onSave={(value) => handleSetpointChange('temperatureSetpoint', value)}
+                    />
+                    <SetpointControl
+                      label="Humidity"
+                      unit="%"
+                      value={settings?.humiditySetpoint}
+                      range={safeRanges.humidity || [0, 100]}
+                      onSave={(value) => handleSetpointChange('humiditySetpoint', value)}
+                    />
+                  </>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No setpoint configuration available yet. Connect AWS settings storage to manage
+                    thresholds remotely.
+                  </Typography>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <AlertsPanel alerts={alerts} />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={3}>
+          <AiFeatureCard
+            title="AI Cry Detection"
+            description="Computer audition flags prolonged crying episodes."
+            status={liveData?.cryStatus === 'Crying' ? 'Alert' : 'Active'}
+            insight={
+              liveData ? `Latest classification: ${liveData.cryStatus}` : 'Awaiting sensor stream'
+            }
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <AiFeatureCard
+            title="AI Presence Detection"
+            description="Monitors incubator occupancy via thermal + visual sensors."
+            insight={liveData ? `Status: ${liveData.presenceStatus}` : 'Awaiting camera feed'}
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <AiFeatureCard
+            title="AI Anomaly Detection"
+            description="Learns normal environmental signatures to surface anomalies."
+            insight={
+              liveData
+                ? 'Monitoring incoming signals for deviations.'
+                : 'Awaiting anomaly detection feed.'
+            }
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <AiFeatureCard
+            title="Weekly AI Summary"
+            description="Generates compliance and stability narratives from reports."
+            insight="Connect AWS analytics to generate weekly AI reports."
+          />
+        </Grid>
+      </Grid>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity={snackbar.severity} onClose={handleCloseSnackbar} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }
 
 export default Home
-
