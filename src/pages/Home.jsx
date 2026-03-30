@@ -35,6 +35,7 @@ import {
   updateMode,
   updateSetpoints,
 } from '../services/incubatorService'
+import PageHeader from '../components/common/PageHeader'
 
 const statusFromRange = (value, range) => {
   if (!range) return 'normal'
@@ -101,37 +102,46 @@ function Home() {
     : 'Awaiting telemetry from AWS'
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Stack spacing={3}>
+      <PageHeader
+        title="NICU Control Center"
+        subtitle="Live neonatal telemetry, AI insights, and actuator control in one place."
+      />
       <Card
         sx={{
-          borderRadius: 4,
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(255,255,255,0.9) 100%)',
+          background: 'linear-gradient(120deg, rgba(37,99,235,0.12), rgba(14,165,233,0.12))',
+          border: '1px solid rgba(37, 99, 235, 0.2)',
         }}
       >
         <CardContent>
-          <Stack spacing={1}>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              NICU Control Center
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Monitoring incubator health, environment, and AI assisted safety in real time.
-            </Typography>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Chip
-                icon={<WifiTetheringIcon />}
-                label={`Device ${connectionStatus}`}
-                color={connectionStatus === 'Online' ? 'success' : 'warning'}
-              />
-              <Chip
-                icon={<NotificationsActiveIcon />}
-                label={`Alerts today: ${alerts.length}`}
-                color="secondary"
-                variant="outlined"
-              />
-              <Typography variant="body2" color="text.secondary">
-                {lastUpdatedText}
-              </Typography>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  Device status: {connectionStatus}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {lastUpdatedText}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Chip
+                  icon={<WifiTetheringIcon />}
+                  label={connectionStatus === 'Online' ? 'Connected' : 'Awaiting device'}
+                  color={connectionStatus === 'Online' ? 'success' : 'warning'}
+                />
+                <Chip
+                  icon={<NotificationsActiveIcon />}
+                  label={`${alerts.length} alerts`}
+                  color="secondary"
+                  variant="outlined"
+                />
+              </Stack>
             </Stack>
+            <Typography variant="body1">
+              Keep an eye on thermal comfort, respiratory health, and environmental stability. Switch
+              between auto and manual modes without leaving this control center.
+            </Typography>
           </Stack>
         </CardContent>
       </Card>
@@ -141,7 +151,7 @@ function Home() {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2} alignItems="stretch">
         <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="Temperature"
@@ -190,7 +200,7 @@ function Home() {
             max={safeRanges.heartRate?.[1]}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="System Status"
             value={connectionStatus}
@@ -199,7 +209,7 @@ function Home() {
             footer={`Mode: ${liveData?.mode || 'Unknown'}`}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="Noise Level"
             value={liveData?.noise}
@@ -209,7 +219,7 @@ function Home() {
             footer="Ambient NICU noise"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="Cry Detection"
             value={liveData?.cryStatus}
@@ -218,7 +228,7 @@ function Home() {
             footer="AI powered cry analysis"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="Baby Presence"
             value={liveData?.presenceStatus}
@@ -229,7 +239,7 @@ function Home() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2} alignItems="stretch">
         <Grid item xs={12} md={6}>
           <TrendChart title="Temperature Trend" data={liveData?.temperatureTrend || []} unit="°C" />
         </Grid>
@@ -244,7 +254,7 @@ function Home() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
@@ -347,7 +357,7 @@ function Home() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={3}>
           <AiFeatureCard
             title="AI Cry Detection"
@@ -395,7 +405,7 @@ function Home() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Stack>
   )
 }
 

@@ -1,21 +1,23 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
-  Box,
+  Stack,
   Typography,
   Card,
   CardContent,
   Grid,
-  Stack,
   Button,
-  List,
-  ListItem,
-  ListItemText,
   Chip,
   Alert as MuiAlert,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from '@mui/material'
 import dayjs from 'dayjs'
 import TrendChart from '../components/charts/TrendChart'
 import { fetchReports } from '../services/incubatorService'
+import PageHeader from '../components/common/PageHeader'
 
 function Reports() {
   const [reports, setReports] = useState([])
@@ -33,77 +35,102 @@ function Reports() {
     loadReports()
   }, [])
 
-  const latest = reports[0]
+  const normalizedReports = useMemo(
+    () =>
+      reports.map((report) => ({
+        id: report.id,
+        weekRange: report.weekRange || report.period || 'Week',
+        avgTemperature:
+          report.avgTemperature ??
+          report.averageTemperature ??
+          null,
+        avgHumidity:
+          report.avgHumidity ??
+          report.averageHumidity ??
+          null,
+        avgSpo2:
+          report.avgSpo2 ??
+          report.averageSpo2 ??
+          null,
+        avgHeartRate:
+          report.avgHeartRate ??
+          report.averageHeartRate ??
+          null,
+        alertsCount: report.alertsCount ?? report.alertCount ?? 0,
+        compliance: report.compliance ?? null,
+        aiSummary: report.aiSummary || 'No AI summary provided.',
+        createdAt: report.createdAt || null,
+      })),
+    [reports]
+  )
+
+  const latest = normalizedReports[0]
 
   const temperatureTrend = useMemo(
     () =>
-      reports.map((report, idx) => ({
+      normalizedReports.map((report, idx) => ({
         timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.averageTemperature,
+        value: report.avgTemperature,
       })),
-    [reports]
+    [normalizedReports]
   )
   const humidityTrend = useMemo(
     () =>
-      reports.map((report, idx) => ({
+      normalizedReports.map((report, idx) => ({
         timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.averageHumidity,
+        value: report.avgHumidity,
       })),
-    [reports]
+    [normalizedReports]
   )
   const spo2Trend = useMemo(
     () =>
-      reports.map((report, idx) => ({
+      normalizedReports.map((report, idx) => ({
         timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.averageSpo2,
+        value: report.avgSpo2,
       })),
-    [reports]
+    [normalizedReports]
   )
   const heartRateTrend = useMemo(
     () =>
-      reports.map((report, idx) => ({
+      normalizedReports.map((report, idx) => ({
         timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.averageHeartRate,
+        value: report.avgHeartRate,
       })),
-    [reports]
+    [normalizedReports]
   )
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Weekly Reports
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Aggregated vitals, AI summaries, and compliance KPIs
-          </Typography>
-        </Box>
-        <Button variant="contained" color="secondary">
-          Export PDF (Coming Soon)
-        </Button>
-      </Stack>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Weekly Reports"
+        subtitle="Aggregated vitals, alert frequency, and AI assessments."
+        action={
+          <Button variant="contained" color="secondary">
+            Export (soon)
+          </Button>
+        }
+      />
 
       {error && <MuiAlert severity="error">{error}</MuiAlert>}
 
       {latest && (
-        <Grid container spacing={3}>
+        <Grid container spacing={2} alignItems="stretch">
           <Grid item xs={12} md={3}>
-            <SummaryCard title="Average Temperature" value={`${latest.averageTemperature} °C`} />
+            <SummaryCard title="Average Temperature" value={formatMetric(latest.avgTemperature, '°C')} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <SummaryCard title="Average Humidity" value={`${latest.averageHumidity}%`} />
+            <SummaryCard title="Average Humidity" value={formatMetric(latest.avgHumidity, '%')} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <SummaryCard title="Compliance" value={`${latest.compliance}%`} />
+            <SummaryCard title="Compliance" value={formatMetric(latest.compliance, '%')} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <SummaryCard title="Alerts" value={latest.alertCount} />
+            <SummaryCard title="Alerts" value={latest.alertsCount} />
           </Grid>
         </Grid>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2} alignItems="stretch">
         <Grid item xs={12} md={6}>
           <TrendChart title="Temperature Trend" data={temperatureTrend} unit="°C" />
         </Grid>
@@ -123,62 +150,70 @@ function Reports() {
           <Typography variant="h6" gutterBottom>
             Report History
           </Typography>
-          <List>
-            {reports.map((report) => (
-              <ListItem key={report.id} divider>
-                <ListItemText
-                  primary={
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        {report.weekRange}
-                      </Typography>
-                      <Chip label={`${report.compliance}% compliance`} color="success" size="small" />
-                    </Stack>
-                  }
-                  secondary={
-                    <>
-                      <Typography variant="body2" color="text.secondary">
-                        Avg Temp {report.averageTemperature}°C · Avg Humidity {report.averageHumidity}% · Alerts {report.alertCount}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        AI Summary: {report.aiSummary}
-                      </Typography>
-                    </>
-                  }
-                />
-                <Typography variant="caption" color="text.secondary">
-                  {report.createdAt
-                    ? `Generated ${dayjs(report.createdAt).format('MMM D, YYYY')}`
-                    : 'Awaiting generation timestamp'}
-                </Typography>
-              </ListItem>
-            ))}
-            {!reports.length && (
-              <ListItem>
-                <ListItemText
-                  primary="No reports generated yet."
-                  secondary="Once AI summaries are produced they will appear here."
-                />
-              </ListItem>
-            )}
-          </List>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Week</TableCell>
+                <TableCell>Avg Temp (°C)</TableCell>
+                <TableCell>Avg Humidity (%)</TableCell>
+                <TableCell>Avg SpO₂ (%)</TableCell>
+                <TableCell>Avg Heart Rate</TableCell>
+                <TableCell>Alerts</TableCell>
+                <TableCell>Compliance</TableCell>
+                <TableCell>AI Summary</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {normalizedReports.map((report) => (
+                <TableRow key={report.id || report.weekRange}>
+                  <TableCell>{report.weekRange}</TableCell>
+                  <TableCell>{formatMetric(report.avgTemperature, '°C')}</TableCell>
+                  <TableCell>{formatMetric(report.avgHumidity, '%')}</TableCell>
+                  <TableCell>{formatMetric(report.avgSpo2, '%')}</TableCell>
+                  <TableCell>{formatMetric(report.avgHeartRate, 'bpm')}</TableCell>
+                  <TableCell>
+                    <Chip label={report.alertsCount} color="primary" variant="outlined" size="small" />
+                  </TableCell>
+                  <TableCell>{formatMetric(report.compliance, '%')}</TableCell>
+                  <TableCell>{report.aiSummary}</TableCell>
+                </TableRow>
+              ))}
+              {!normalizedReports.length && (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <Typography variant="body2" color="text.secondary">
+                      No reports generated yet. Once AI summaries are produced they will appear here.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-    </Box>
+    </Stack>
   )
 }
 
 const SummaryCard = ({ title, value }) => (
-  <Card sx={{ borderRadius: 4 }}>
-    <CardContent>
+  <Card sx={{ height: '100%' }}>
+    <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Typography variant="body2" color="text.secondary">
         {title}
       </Typography>
-      <Typography variant="h4" sx={{ fontWeight: 700 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
         {value ?? '--'}
       </Typography>
     </CardContent>
   </Card>
 )
+
+const formatMetric = (value, unit) => {
+  if (value == null) return '--'
+  if (typeof value === 'number') {
+    return unit ? `${value} ${unit}` : value
+  }
+  return value
+}
 
 export default Reports

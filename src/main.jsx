@@ -10,31 +10,39 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#6366f1',
-      light: '#818cf8',
-      dark: '#4f46e5',
+      main: '#2563eb',
+      light: '#60a5fa',
+      dark: '#1d4ed8',
     },
     secondary: {
-      main: '#8b5cf6',
-      light: '#a78bfa',
-      dark: '#7c3aed',
+      main: '#0ea5e9',
+      light: '#67e8f9',
+      dark: '#0284c7',
     },
     background: {
-      default: '#f8fafc',
+      default: '#f5f7fb',
       paper: '#ffffff',
+    },
+    text: {
+      primary: '#0f172a',
+      secondary: '#475569',
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h4: {
       fontWeight: 700,
+      letterSpacing: '-0.01em',
     },
     h5: {
       fontWeight: 600,
     },
+    body1: {
+      lineHeight: 1.5,
+    },
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 14,
   },
   components: {
     MuiButton: {
@@ -42,8 +50,24 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 600,
-          padding: '12px 24px',
-          borderRadius: '12px',
+          borderRadius: 999,
+          paddingInline: 24,
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 18,
+          border: '1px solid rgba(15, 23, 42, 0.08)',
+          boxShadow: '0 20px 40px rgba(15, 23, 42, 0.05)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 18,
         },
       },
     },
@@ -51,16 +75,16 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: '12px',
+            borderRadius: 12,
           },
         },
       },
     },
-    MuiCard: {
+    MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: '24px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          borderRadius: 8,
+          fontWeight: 600,
         },
       },
     },
@@ -77,4 +101,3 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </StrictMode>,
 )
-

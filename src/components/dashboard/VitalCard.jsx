@@ -12,8 +12,13 @@ function VitalCard({ title, value, unit, status = 'normal', icon, footer, min, m
   return (
     <Card
       sx={{
-        borderRadius: 4,
-        background: 'linear-gradient(180deg, rgba(99,102,241,0.04) 0%, rgba(255,255,255,0.9) 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        borderRadius: 3,
+        backgroundColor: '#fff',
+        border: '1px solid rgba(15,23,42,0.06)',
+        boxShadow: '0 15px 30px rgba(15,23,42,0.04)',
       }}
     >
       <CardContent>

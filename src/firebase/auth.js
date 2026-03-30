@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from './config'
+import { createUserProfile, ensureUserProfile } from './firestore'
 
 /**
  * Sign in with email and password
@@ -39,6 +40,15 @@ export const signUp = async (email, password, displayName = null) => {
     // Update profile if display name is provided
     if (displayName) {
       await updateProfile(userCredential.user, { displayName })
+    }
+
+    const profileResult = await createUserProfile(userCredential.user, {
+      name: displayName,
+      role: 'Parent',
+    })
+
+    if (!profileResult.success) {
+      console.error('Failed to create user profile:', profileResult.error)
     }
     
     return { success: true, user: userCredential.user }
@@ -88,6 +98,18 @@ export const getCurrentUser = () => {
  * @returns {Function} - Unsubscribe function
  */
 export const onAuthChange = (callback) => {
-  return onAuthStateChanged(auth, callback)
+  return onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        await ensureUserProfile(user, {
+          name: user.displayName || 'User',
+          email: user.email || '',
+          role: 'Parent',
+        })
+      } catch (error) {
+        console.error('Error ensuring user profile:', error)
+      }
+    }
+    callback(user)
+  })
 }
-

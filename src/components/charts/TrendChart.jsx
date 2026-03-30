@@ -17,7 +17,7 @@ function TrendChart({ title, data = [], color = '#6366f1', unit }) {
   }))
 
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ height: '100%' }}>
         <Typography variant="h6" gutterBottom>
           {title}

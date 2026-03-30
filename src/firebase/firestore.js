@@ -18,6 +18,8 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 
+const USERS_COLLECTION = 'users'
+
 /**
  * Add a document to a collection
  * @param {string} collectionName - Name of the collection
@@ -225,6 +227,76 @@ export const setDocument = async (collectionName, docId, data, merge = true) => 
   } catch (error) {
     return { success: false, error: error.message }
   }
+}
+
+/**
+ * Create a Firestore user profile document if it does not exist.
+ * @param {import('firebase/auth').User} user
+ * @param {Object} extraData
+ */
+export const createUserProfile = async (user, extraData = {}) => {
+  if (!user?.uid) {
+    return { success: false, error: 'Invalid user object' }
+  }
+
+  try {
+    const docRef = doc(db, USERS_COLLECTION, user.uid)
+    const snapshot = await getDoc(docRef)
+
+    if (snapshot.exists()) {
+      return { success: true, alreadyExists: true, data: snapshot.data() }
+    }
+
+    const profile = {
+      name: extraData.name || user.displayName || 'User',
+      email: user.email || extraData.email || '',
+      role: extraData.role || 'Parent',
+      createdAt: new Date(),
+    }
+
+    await setDoc(docRef, profile, { merge: false })
+
+    return { success: true, data: profile }
+  } catch (error) {
+    console.error('Error creating user profile:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get a Firestore user profile.
+ * @param {string} uid
+ */
+export const getUserProfile = async (uid) => {
+  if (!uid) {
+    return { success: false, error: 'Missing UID' }
+  }
+
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid)
+    const snapshot = await getDoc(docRef)
+
+    if (!snapshot.exists()) {
+      return { success: false, error: 'User profile not found' }
+    }
+
+    return { success: true, data: { id: snapshot.id, ...snapshot.data() } }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Ensure a user profile exists, creating it when necessary.
+ * @param {import('firebase/auth').User} user
+ * @param {Object} fallbackData
+ */
+export const ensureUserProfile = async (user, fallbackData = {}) => {
+  const result = await createUserProfile(user, fallbackData)
+  if (!result.success) {
+    console.error('Failed to ensure user profile:', result.error)
+  }
+  return result
 }
 
 /**

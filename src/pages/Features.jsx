@@ -1,8 +1,9 @@
-import { Box, Typography, Grid, Card, CardContent, Stack, Chip } from '@mui/material'
+import { Stack, Typography, Grid, Card, CardContent, Chip } from '@mui/material'
 import SensorsIcon from '@mui/icons-material/Sensors'
 import PsychologyIcon from '@mui/icons-material/Psychology'
 import BabyChangingStationIcon from '@mui/icons-material/BabyChangingStation'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
+import PageHeader from '../components/common/PageHeader'
 
 const features = [
   {
@@ -44,17 +45,13 @@ const sdgs = [
 
 function Features() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box>
-        <Typography variant="h3" sx={{ fontWeight: 700 }}>
-          Project Features
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Smart IoT-Based Infant Incubator with AI Monitoring System
-        </Typography>
-      </Box>
+    <Stack spacing={4}>
+      <PageHeader
+        title="Project Features"
+        subtitle="Smart IoT-Based Infant Incubator with AI Monitoring System"
+      />
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {features.map((feature) => (
           <Grid item xs={12} md={6} key={feature.title}>
             <Card sx={{ height: '100%' }}>
@@ -74,7 +71,7 @@ function Features() {
         ))}
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -104,7 +101,7 @@ function Features() {
           </Card>
         </Grid>
       </Grid>
-    </Box>
+    </Stack>
   )
 }
 

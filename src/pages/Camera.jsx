@@ -1,13 +1,15 @@
-import { Box, Typography, Card, CardContent, Button, Stack } from '@mui/material'
+import { Stack, Typography, Card, CardContent, Button } from '@mui/material'
 import VideocamIcon from '@mui/icons-material/Videocam'
+import PageHeader from '../components/common/PageHeader'
 
 function Camera() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-        Live Camera Feed
-      </Typography>
-      <Card sx={{ minHeight: 320, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Live Camera Feed"
+        subtitle="Connect your incubator’s RTSP/HTTP stream or upload periodic snapshots."
+      />
+      <Card sx={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CardContent sx={{ textAlign: 'center' }}>
           <VideocamIcon color="disabled" sx={{ fontSize: 64 }} />
           <Typography variant="h6" gutterBottom>
@@ -22,7 +24,7 @@ function Camera() {
           </Stack>
         </CardContent>
       </Card>
-    </Box>
+    </Stack>
   )
 }
 

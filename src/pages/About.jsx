@@ -1,4 +1,5 @@
-import { Box, Typography, Grid, Card, CardContent, Stack, Avatar, Chip } from '@mui/material'
+import { Stack, Typography, Grid, Card, CardContent, Avatar, Chip } from '@mui/material'
+import PageHeader from '../components/common/PageHeader'
 
 const team = [
   { name: 'Student Lead', role: 'Embedded & Cloud', color: 'primary' },
@@ -9,15 +10,11 @@ const team = [
 
 function About() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box>
-        <Typography variant="h3" sx={{ fontWeight: 700 }}>
-          Smart IoT-Based Infant Incubator
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Final Year Project – Intelligent NICU monitoring to support neonatal care teams.
-        </Typography>
-      </Box>
+    <Stack spacing={4}>
+      <PageHeader
+        title="Smart IoT-Based Infant Incubator"
+        subtitle="Final Year Project – Intelligent NICU monitoring to support neonatal care teams."
+      />
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Card>
@@ -97,7 +94,7 @@ function About() {
           </Grid>
         </CardContent>
       </Card>
-    </Box>
+    </Stack>
   )
 }
 

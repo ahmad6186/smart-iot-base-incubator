@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Box,
+  Stack,
   Card,
   CardContent,
   Typography,
@@ -16,11 +16,12 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Stack,
-  Alert,
+  Alert as MuiAlert,
+  Divider,
 } from '@mui/material'
 import dayjs from 'dayjs'
 import { fetchAlerts } from '../services/incubatorService'
+import PageHeader from '../components/common/PageHeader'
 
 const severityOptions = ['all', 'normal', 'warning', 'critical']
 const typeOptions = [
@@ -68,12 +69,16 @@ function Alerts() {
   }, [alerts, filters])
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-        Alerts Timeline
-      </Typography>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Alerts"
+        subtitle="Filter and review incubator events captured by the AI monitoring stack."
+      />
       <Card>
         <CardContent>
+          <Typography variant="subtitle2" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+            Filters
+          </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
@@ -118,26 +123,28 @@ function Alerts() {
               />
             </Grid>
           </Grid>
-          <Stack direction="row" spacing={1} mt={2} flexWrap="wrap">
+          <Divider sx={{ my: 2 }} />
+          <Grid container spacing={1}>
             {typeOptions.slice(1).map((type) => (
-              <Chip
-                key={type}
-                label={type}
-                variant={filters.type === type ? 'filled' : 'outlined'}
-                color="secondary"
-                onClick={() => setFilters((prev) => ({ ...prev, type }))}
-              />
+              <Grid item key={type}>
+                <Chip
+                  label={type}
+                  variant={filters.type === type ? 'filled' : 'outlined'}
+                  color="secondary"
+                  onClick={() => setFilters((prev) => ({ ...prev, type }))}
+                />
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
         </CardContent>
       </Card>
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <MuiAlert severity="error">{error}</MuiAlert>}
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             Alert History
           </Typography>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Type</TableCell>
@@ -172,7 +179,11 @@ function Alerts() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{dayjs(alert.createdAt).format('MMM D, HH:mm')}</TableCell>
+                  <TableCell>
+                    {alert.createdAt
+                      ? dayjs(alert.createdAt).format('MMM D, HH:mm')
+                      : 'N/A'}
+                  </TableCell>
                 </TableRow>
               ))}
               {!filteredAlerts.length && (
@@ -188,7 +199,7 @@ function Alerts() {
           </Table>
         </CardContent>
       </Card>
-    </Box>
+    </Stack>
   )
 }
 

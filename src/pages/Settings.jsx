@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
-  Box,
+  Stack,
   Typography,
   Card,
   CardContent,
   Grid,
   Avatar,
-  Stack,
   Switch,
   FormControlLabel,
   Divider,
@@ -18,6 +17,7 @@ import dayjs from 'dayjs'
 import useIncubatorData from '../hooks/useIncubatorData'
 import { updateSetpoints } from '../services/incubatorService'
 import { getCurrentUser } from '../firebase/auth'
+import PageHeader from '../components/common/PageHeader'
 
 function Settings() {
   const { settings } = useIncubatorData()
@@ -58,12 +58,13 @@ function Settings() {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700 }}>
-        Settings & Preferences
-      </Typography>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Settings & Preferences"
+        subtitle="Control notifications, safe ranges, and automation rules."
+      />
       {message && <Alert severity="info">{message}</Alert>}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
@@ -149,7 +150,7 @@ function Settings() {
           </Card>
         </Grid>
       </Grid>
-    </Box>
+    </Stack>
   )
 }
 
