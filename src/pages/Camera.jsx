@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Stack, Typography, Card, CardContent, Box, Alert } from '@mui/material'
 import PageHeader from '../components/common/PageHeader'
 
-const CAMERA_STREAM_URL = 'http://192.168.100.21'
+// ESP32 STREAM URL (IMPORTANT: use :81/stream)
+const CAMERA_STREAM_URL = 'http://192.168.0.109:81/stream'
 
 function Camera() {
   const [streamError, setStreamError] = useState(false)
@@ -13,37 +14,43 @@ function Camera() {
         title="Live Camera Feed"
         subtitle="Live stream coming directly from the incubator camera."
       />
-      <Card>
-        <CardContent>
+
+      <Card sx={{ height: '80vh' }}>
+        <CardContent sx={{ height: '100%' }}>
           <Typography variant="subtitle1" gutterBottom>
             Streaming from {CAMERA_STREAM_URL}
           </Typography>
+
+          {/* VIDEO STREAM */}
           <Box
-            component="iframe"
+            component="img"
             src={CAMERA_STREAM_URL}
-            title="Incubator live stream"
-            loading="lazy"
+            alt="Camera Stream"
+            onError={() => setStreamError(true)}
             sx={{
               width: '100%',
-              minHeight: 560,
-              border: 0,
-              borderRadius: 1,
-              bgcolor: 'grey.900',
+              height: '90%',
+              objectFit: 'cover',
+              borderRadius: 2,
+              bgcolor: 'black',
             }}
-            onError={() => setStreamError(true)}
           />
+
+          {/* ERROR MESSAGE */}
           {streamError ? (
             <Alert severity="error" sx={{ mt: 2 }}>
-              Unable to load the camera stream. Ensure the browser is on the same network and that the camera allows
-              cross-origin access over HTTP.
+              Unable to load the camera stream. Make sure:
+              <br />• ESP32 is ON  
+              <br />• Same WiFi network  
+              <br />• Stream URL is correct  
             </Alert>
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              If you do not see the feed, confirm the camera is reachable from this device or open{' '}
+              If the stream does not appear, try opening it directly:
+              <br />
               <a href={CAMERA_STREAM_URL} target="_blank" rel="noreferrer">
-                the stream in a new tab
+                Open Stream
               </a>
-              .
             </Typography>
           )}
         </CardContent>
