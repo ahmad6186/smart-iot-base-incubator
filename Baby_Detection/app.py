@@ -27,7 +27,7 @@ face_cascade = cv2.CascadeClassifier(
 
 last_seen = time.time()
 baby_present = False
-status_text = "Initializing..."
+status_text = "Initializing....."
 last_alert_push = 0
 firestore_client = None
 
