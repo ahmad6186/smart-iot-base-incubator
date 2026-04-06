@@ -229,6 +229,26 @@ export const setDocument = async (collectionName, docId, data, merge = true) => 
   }
 }
 
+export const setUserRole = async (uid, role) => {
+  if (!uid) {
+    return { success: false, error: 'Missing UID' }
+  }
+
+  try {
+    await setDoc(
+      doc(db, USERS_COLLECTION, uid),
+      {
+        role,
+        updatedAt: new Date(),
+      },
+      { merge: true }
+    )
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
 /**
  * Create a Firestore user profile document if it does not exist.
  * @param {import('firebase/auth').User} user

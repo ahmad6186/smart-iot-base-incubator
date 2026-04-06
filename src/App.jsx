@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
 import Home from './pages/Home'
 import Features from './pages/Features'
 import Alerts from './pages/Alerts'
@@ -14,6 +13,7 @@ import { getUserProfile } from './firebase/firestore'
 import { Box, CircularProgress } from '@mui/material'
 import DashboardLayout from './components/layout/DashboardLayout'
 import { AuthProvider } from './context/AuthContext'
+import UserManagement from './pages/UserManagement'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -43,14 +43,16 @@ function App() {
     return () => unsubscribe()
   }, [])
 
+  const isAdmin = profile?.role?.toLowerCase() === 'admin'
+
   const authContextValue = useMemo(
     () => ({
       user,
       profile,
-      isAdmin: profile?.role?.toLowerCase() === 'admin',
+      isAdmin,
       loading,
     }),
-    [user, profile, loading]
+    [user, profile, loading, isAdmin]
   )
 
   if (loading) {
@@ -79,7 +81,7 @@ function App() {
     <AuthProvider value={authContextValue}>
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/home" replace />} />
-        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/home" replace />} />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
         <Route path="/" element={protectedElement}>
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<Home />} />
@@ -89,7 +91,11 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route
             path="settings"
-            element={profile?.role?.toLowerCase() === 'admin' ? <Settings /> : <Navigate to="/home" replace />}
+            element={isAdmin ? <Settings /> : <Navigate to="/home" replace />}
+          />
+          <Route
+            path="users"
+            element={isAdmin ? <UserManagement /> : <Navigate to="/home" replace />}
           />
           <Route path="camera" element={<Camera />} />
           <Route path="about" element={<About />} />

@@ -8,7 +8,7 @@ import {
   updateProfile,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { auth } from './config'
+import { auth, getAdminAuth } from './config'
 import { createUserProfile, ensureUserProfile } from './firestore'
 
 /**
@@ -65,6 +65,44 @@ export const logOut = async () => {
   try {
     await signOut(auth)
     return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Create a new user while keeping the current admin session intact.
+ * Uses a secondary Firebase app instance so admins can provision accounts.
+ */
+export const createUserAsAdmin = async ({ email, password, displayName, role = 'Parent' }) => {
+  try {
+    const adminAuth = getAdminAuth()
+    const userCredential = await createUserWithEmailAndPassword(adminAuth, email, password)
+    const { user: newUser } = userCredential
+
+    if (displayName) {
+      await updateProfile(newUser, { displayName })
+    }
+
+    const profileResult = await createUserProfile(newUser, {
+      name: displayName,
+      role,
+    })
+
+    if (!profileResult.success) {
+      console.error('Failed to create admin-provisioned profile:', profileResult.error)
+      throw new Error(profileResult.error)
+    }
+
+    await signOut(adminAuth)
+
+    return {
+      success: true,
+      data: {
+        uid: newUser.uid,
+        email: newUser.email,
+      },
+    }
   } catch (error) {
     return { success: false, error: error.message }
   }

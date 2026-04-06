@@ -1,5 +1,5 @@
 // Firebase configuration
-import { initializeApp } from 'firebase/app'
+import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAnalytics } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
@@ -18,7 +18,7 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
 
 // Initialize Firebase Analytics (only in browser environment)
 let analytics = null
@@ -32,5 +32,19 @@ export const db = getFirestore(app)
 export const storage = getStorage(app)
 export { analytics }
 
-export default app
+let adminApp = null
+let adminAuth = null
 
+export const getAdminAuth = () => {
+  if (!adminApp) {
+    adminApp =
+      getApps().find((appInstance) => appInstance.name === 'adminApp') ||
+      initializeApp(firebaseConfig, 'adminApp')
+  }
+  if (!adminAuth) {
+    adminAuth = getAuth(adminApp)
+  }
+  return adminAuth
+}
+
+export default app

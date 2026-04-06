@@ -293,20 +293,7 @@ function Login() {
 
             <Box sx={{ textAlign: 'center', mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
-                <Link
-                  to="/signup"
-                  sx={{
-                    color: 'primary.main',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Sign up
-                </Link>
+                Need an account? Please reach out to your administrator for access.
               </Typography>
             </Box>
           </CardContent>
@@ -317,4 +304,3 @@ function Login() {
 }
 
 export default Login
-

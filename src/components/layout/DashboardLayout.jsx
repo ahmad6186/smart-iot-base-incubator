@@ -26,6 +26,7 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import InfoIcon from '@mui/icons-material/Info'
 import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects'
+import GroupIcon from '@mui/icons-material/Group'
 import { logOut } from '../../firebase/auth'
 
 const drawerWidth = 260
@@ -35,7 +36,8 @@ const navItems = [
   { label: 'Features', path: '/features', icon: <EmojiObjectsIcon /> },
   { label: 'Alerts', path: '/alerts', icon: <NotificationsActiveIcon /> },
   { label: 'Reports', path: '/reports', icon: <AssessmentIcon /> },
-  { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+  { label: 'Settings', path: '/settings', icon: <SettingsIcon />, adminOnly: true },
+  { label: 'User Accounts', path: '/users', icon: <GroupIcon />, adminOnly: true },
   { label: 'Camera', path: '/camera', icon: <CameraAltIcon /> },
   { label: 'About', path: '/about', icon: <InfoIcon /> },
 ]
@@ -46,12 +48,10 @@ function DashboardLayout({ user, profile }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
   const isAdmin = (profile?.role || '').toLowerCase() === 'admin'
-  const navigationItems = useMemo(() => {
-    return navItems.filter((item) => {
-      if (!isAdmin && item.path === '/settings') return false
-      return true
-    })
-  }, [isAdmin])
+  const navigationItems = useMemo(
+    () => navItems.filter((item) => (item.adminOnly ? isAdmin : true)),
+    [isAdmin]
+  )
 
   const handleDrawerToggle = () => {
     setMobileOpen(prev => !prev)
