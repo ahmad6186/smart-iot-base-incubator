@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { NavLink, useNavigate, Outlet } from 'react-router-dom'
 import {
   Box,
@@ -40,11 +40,18 @@ const navItems = [
   { label: 'About', path: '/about', icon: <InfoIcon /> },
 ]
 
-function DashboardLayout({ user }) {
+function DashboardLayout({ user, profile }) {
   const theme = useTheme()
   const isMdDown = useMediaQuery(theme.breakpoints.down('md'))
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const isAdmin = (profile?.role || '').toLowerCase() === 'admin'
+  const navigationItems = useMemo(() => {
+    return navItems.filter((item) => {
+      if (!isAdmin && item.path === '/settings') return false
+      return true
+    })
+  }, [isAdmin])
 
   const handleDrawerToggle = () => {
     setMobileOpen(prev => !prev)
@@ -71,7 +78,7 @@ function DashboardLayout({ user }) {
         </Typography>
       </Box>
       <List sx={{ flexGrow: 1, py: 2 }}>
-        {navItems.map((item) => (
+        {navigationItems.map((item) => (
           <ListItemButton
             key={item.path}
             component={NavLink}
@@ -109,7 +116,7 @@ function DashboardLayout({ user }) {
             {user?.displayName || user?.email}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            NICU Specialist
+            {profile?.role || 'Parent'}
           </Typography>
         </Box>
       </Box>

@@ -36,6 +36,7 @@ import {
   updateSetpoints,
 } from '../services/incubatorService'
 import PageHeader from '../components/common/PageHeader'
+import { useAuth } from '../context/AuthContext'
 
 const statusFromRange = (value, range) => {
   if (!range) return 'normal'
@@ -50,11 +51,13 @@ const statusFromRange = (value, range) => {
 
 function Home() {
   const { liveData, actuators, settings, alerts, loading } = useIncubatorData()
+  const { isAdmin } = useAuth()
+  const canControl = Boolean(isAdmin)
   const [modeSaving, setModeSaving] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   const handleModeChange = async (_, value) => {
-    if (!value || !liveData) return
+    if (!value || !liveData || !canControl) return
     setModeSaving(true)
     const result = await updateMode(value)
     setSnackbar({
@@ -66,7 +69,7 @@ function Home() {
   }
 
   const handleActuatorChange = async (name, value) => {
-    if (!actuators) return
+    if (!actuators || !canControl) return
     const result = await updateActuator(name, value)
     setSnackbar({
       open: true,
@@ -76,7 +79,7 @@ function Home() {
   }
 
   const handleSetpointChange = async (field, value) => {
-    if (!settings) return
+    if (!settings || !canControl) return
     const result = await updateSetpoints({ [field]: Number(value) })
     setSnackbar({
       open: true,
@@ -265,50 +268,56 @@ function Home() {
                   value={liveData?.mode ?? null}
                   onChange={handleModeChange}
                   size="small"
+                  disabled={modeSaving || !canControl}
                 >
-                  <ToggleButton value="Auto" disabled={modeSaving || !liveData}>
+                  <ToggleButton value="Auto" disabled={modeSaving || !liveData || !canControl}>
                     Auto
                   </ToggleButton>
-                  <ToggleButton value="Manual" disabled={modeSaving || !liveData}>
+                  <ToggleButton value="Manual" disabled={modeSaving || !liveData || !canControl}>
                     Manual
                   </ToggleButton>
                 </ToggleButtonGroup>
                 <Divider />
                 <Stack spacing={2}>
+                  {!canControl && (
+                    <Alert severity="info">
+                      You have read-only access. Only admins can change actuator states.
+                    </Alert>
+                  )}
                   <ActuatorToggle
                     label="Heater"
                     value={actuators?.heater}
                     onChange={(value) => handleActuatorChange('heater', value)}
                     description="Maintain thermal comfort"
-                    disabled={!actuators}
+                    disabled={!actuators || !canControl}
                   />
                   <ActuatorToggle
                     label="Fan"
                     value={actuators?.fan}
                     onChange={(value) => handleActuatorChange('fan', value)}
                     description="Air circulation"
-                    disabled={!actuators}
+                    disabled={!actuators || !canControl}
                   />
                   <ActuatorToggle
                     label="Humidifier"
                     value={actuators?.humidifier}
                     onChange={(value) => handleActuatorChange('humidifier', value)}
                     description="Humidity regulation"
-                    disabled={!actuators}
+                    disabled={!actuators || !canControl}
                   />
                   <ActuatorToggle
                     label="Buzzer"
                     value={actuators?.buzzer}
                     onChange={(value) => handleActuatorChange('buzzer', value)}
                     description="Nurse alerts"
-                    disabled={!actuators}
+                    disabled={!actuators || !canControl}
                   />
                   <ActuatorToggle
                     label="Light"
                     value={actuators?.light}
                     onChange={(value) => handleActuatorChange('light', value)}
                     description="Observation lighting"
-                    disabled={!actuators}
+                    disabled={!actuators || !canControl}
                   />
                   {!actuators && (
                     <Typography variant="caption" color="text.secondary">
@@ -333,6 +342,7 @@ function Home() {
                       value={settings?.temperatureSetpoint}
                       range={safeRanges.temperature || [0, 100]}
                       onSave={(value) => handleSetpointChange('temperatureSetpoint', value)}
+                      disabled={!canControl}
                     />
                     <SetpointControl
                       label="Humidity"
@@ -340,7 +350,13 @@ function Home() {
                       value={settings?.humiditySetpoint}
                       range={safeRanges.humidity || [0, 100]}
                       onSave={(value) => handleSetpointChange('humiditySetpoint', value)}
+                      disabled={!canControl}
                     />
+                    {!canControl && (
+                      <Alert severity="info">
+                        View-only mode: contact an administrator to update target ranges.
+                      </Alert>
+                    )}
                   </>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
