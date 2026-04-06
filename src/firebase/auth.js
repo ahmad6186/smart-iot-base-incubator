@@ -8,8 +8,9 @@ import {
   updateProfile,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { auth, getAdminAuth } from './config'
+import { auth, getAdminAuth, db } from './config'
 import { createUserProfile, ensureUserProfile } from './firestore'
+import { doc, setDoc } from 'firebase/firestore'
 
 /**
  * Sign in with email and password
@@ -75,8 +76,9 @@ export const logOut = async () => {
  * Uses a secondary Firebase app instance so admins can provision accounts.
  */
 export const createUserAsAdmin = async ({ email, password, displayName, role = 'Parent' }) => {
+  const adminAuth = getAdminAuth()
+
   try {
-    const adminAuth = getAdminAuth()
     const userCredential = await createUserWithEmailAndPassword(adminAuth, email, password)
     const { user: newUser } = userCredential
 
@@ -84,17 +86,14 @@ export const createUserAsAdmin = async ({ email, password, displayName, role = '
       await updateProfile(newUser, { displayName })
     }
 
-    const profileResult = await createUserProfile(newUser, {
+    const profile = {
       name: displayName,
+      email: newUser.email || email,
       role,
-    })
-
-    if (!profileResult.success) {
-      console.error('Failed to create admin-provisioned profile:', profileResult.error)
-      throw new Error(profileResult.error)
+      createdAt: new Date(),
     }
 
-    await signOut(adminAuth)
+    await setDoc(doc(db, 'users', newUser.uid), profile, { merge: false })
 
     return {
       success: true,
@@ -105,6 +104,8 @@ export const createUserAsAdmin = async ({ email, password, displayName, role = '
     }
   } catch (error) {
     return { success: false, error: error.message }
+  } finally {
+    await signOut(adminAuth).catch(() => {})
   }
 }
 

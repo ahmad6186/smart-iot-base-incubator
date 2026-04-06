@@ -25,6 +25,24 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+### Baby detection Flask service
+
+1. Run your Flask + OpenCV inference service so it exposes an HTTP endpoint that returns the current baby-presence classification.  
+   The UI polls `GET /api/presence` and expects JSON like:
+   ```json
+   {
+     "present": true,
+     "confidence": 0.94,
+     "timestamp": "2024-11-05T12:34:56Z"
+   }
+   ```
+2. Allow CORS on the Flask route so the browser can reach it from the Vite dev server / production origin.
+3. Point the frontend to the service by adding the base URL (without the `/api/presence` path) to `.env`:
+   ```env
+   VITE_DETECTION_API_URL=http://192.168.0.120:5000
+   ```
+4. Restart `npm run dev`. The `Camera` page now overlays the presence classification while the ESP32 stream plays.
+
 ### Build
 
 Create a production build:
