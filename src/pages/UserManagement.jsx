@@ -23,8 +23,7 @@ import {
 } from '@mui/material'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import PageHeader from '../components/common/PageHeader'
-import { createUserAsAdmin } from '../firebase/auth'
-import { getDocuments, setUserRole } from '../firebase/firestore'
+import { createUserAsAdmin, fetchUsers, updateUserRole } from '../services/userService'
 
 const roleOptions = [
   { label: 'Parent (monitor only)', value: 'Parent' },
@@ -48,7 +47,7 @@ function UserManagement() {
 
   const loadUsers = async () => {
     setUsersLoading(true)
-    const result = await getDocuments('users')
+    const result = await fetchUsers()
     if (result.success) {
       setUsers(result.data)
     } else {
@@ -99,7 +98,7 @@ function UserManagement() {
 
   const handleRoleChange = async (uid, newRole) => {
     setRoleUpdating(uid)
-    const result = await setUserRole(uid, newRole)
+    const result = await updateUserRole(uid, newRole)
     if (result.success) {
       setUsers((prev) => prev.map((user) => (user.id === uid ? { ...user, role: newRole } : user)))
       setStatus({ type: 'info', message: 'Role updated.' })

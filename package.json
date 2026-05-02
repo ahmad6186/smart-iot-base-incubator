@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:frontend": "vite",
+    "dev:backend": ".venv/bin/python backend/app.py",
+    "backend:test": ".venv/bin/python -m unittest backend.test_validation",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

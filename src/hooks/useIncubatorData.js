@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  subscribeToLiveData,
-  subscribeToActuators,
-  subscribeToSettings,
-  subscribeToAlerts,
-} from '../services/incubatorService'
+import { subscribeToIncubatorSnapshot } from '../services/incubatorService'
 
 const initialState = {
   liveData: null,
@@ -19,51 +14,17 @@ function useIncubatorData() {
   const [state, setState] = useState(initialState)
 
   useEffect(() => {
-    const unsubscribes = []
-
-    unsubscribes.push(
-      subscribeToLiveData(({ data, error }) => {
-        setState((prev) => ({
-          ...prev,
-          liveData: data,
-          error: error || prev.error,
-          loading: false,
-        }))
-      })
-    )
-
-    unsubscribes.push(
-      subscribeToActuators((data) => {
-        setState((prev) => ({
-          ...prev,
-          actuators: data,
-        }))
-      })
-    )
-
-    unsubscribes.push(
-      subscribeToSettings((data) => {
-        setState((prev) => ({
-          ...prev,
-          settings: data,
-        }))
-      })
-    )
-
-    unsubscribes.push(
-      subscribeToAlerts((data) => {
-        setState((prev) => ({
-          ...prev,
-          alerts: data || [],
-        }))
-      })
-    )
-
-    return () => {
-      unsubscribes.forEach((unsubscribe) => {
-        if (typeof unsubscribe === 'function') unsubscribe()
-      })
-    }
+    return subscribeToIncubatorSnapshot(({ data, error }) => {
+      setState((prev) => ({
+        ...prev,
+        liveData: data?.liveData || null,
+        actuators: data?.actuators || null,
+        settings: data?.settings || null,
+        alerts: data?.alerts || [],
+        error: error || null,
+        loading: false,
+      }))
+    })
   }, [])
 
   return state

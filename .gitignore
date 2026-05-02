@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+__pycache__
+*.py[cod]
 *.local
 .venv
 
@@ -17,6 +19,9 @@ dist-ssr
 .env
 .env.local
 .env.production
+serviceAccountKey.json
+firebase-service-account.json
+*-service-account*.json
 
 # Editor directories and files
 .vscode/*

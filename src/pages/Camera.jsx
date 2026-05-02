@@ -158,8 +158,8 @@ function Camera() {
             <Alert severity="warning" sx={{ mt: 2 }}>
               {presenceError}
               <br />
-              Confirm the Flask detection API is running and that `VITE_DETECTION_API_URL` points to
-              it.
+              Confirm the backend API is running and that `DETECTION_SERVICE_URL` points to the
+              Flask detection service.
             </Alert>
           )}
         </CardContent>

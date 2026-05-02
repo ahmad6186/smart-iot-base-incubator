@@ -8,9 +8,11 @@ import {
   updateProfile,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { auth, getAdminAuth, db } from './config'
-import { createUserProfile, ensureUserProfile } from './firestore'
-import { doc, setDoc } from 'firebase/firestore'
+import { auth } from './config'
+import {
+  createUserAsAdmin as createBackendUserAsAdmin,
+  ensureCurrentUserProfile,
+} from '../services/userService'
 
 /**
  * Sign in with email and password
@@ -43,10 +45,7 @@ export const signUp = async (email, password, displayName = null) => {
       await updateProfile(userCredential.user, { displayName })
     }
 
-    const profileResult = await createUserProfile(userCredential.user, {
-      name: displayName,
-      role: 'Parent',
-    })
+    const profileResult = await ensureCurrentUserProfile()
 
     if (!profileResult.success) {
       console.error('Failed to create user profile:', profileResult.error)
@@ -73,40 +72,10 @@ export const logOut = async () => {
 
 /**
  * Create a new user while keeping the current admin session intact.
- * Uses a secondary Firebase app instance so admins can provision accounts.
+ * The backend verifies the current user is an admin before provisioning accounts.
  */
 export const createUserAsAdmin = async ({ email, password, displayName, role = 'Parent' }) => {
-  const adminAuth = getAdminAuth()
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(adminAuth, email, password)
-    const { user: newUser } = userCredential
-
-    if (displayName) {
-      await updateProfile(newUser, { displayName })
-    }
-
-    const profile = {
-      name: displayName,
-      email: newUser.email || email,
-      role,
-      createdAt: new Date(),
-    }
-
-    await setDoc(doc(db, 'users', newUser.uid), profile, { merge: false })
-
-    return {
-      success: true,
-      data: {
-        uid: newUser.uid,
-        email: newUser.email,
-      },
-    }
-  } catch (error) {
-    return { success: false, error: error.message }
-  } finally {
-    await signOut(adminAuth).catch(() => {})
-  }
+  return createBackendUserAsAdmin({ email, password, displayName, role })
 }
 
 /**
@@ -137,18 +106,5 @@ export const getCurrentUser = () => {
  * @returns {Function} - Unsubscribe function
  */
 export const onAuthChange = (callback) => {
-  return onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        await ensureUserProfile(user, {
-          name: user.displayName || 'User',
-          email: user.email || '',
-          role: 'Parent',
-        })
-      } catch (error) {
-        console.error('Error ensuring user profile:', error)
-      }
-    }
-    callback(user)
-  })
+  return onAuthStateChanged(auth, callback)
 }

@@ -50,7 +50,7 @@ const statusFromRange = (value, range) => {
 }
 
 function Home() {
-  const { liveData, actuators, settings, alerts, loading } = useIncubatorData()
+  const { liveData, actuators, settings, alerts, loading, error } = useIncubatorData()
   const { isAdmin } = useAuth()
   const canControl = Boolean(isAdmin)
   const [modeSaving, setModeSaving] = useState(false)
@@ -110,6 +110,11 @@ function Home() {
         title="NICU Control Center"
         subtitle="Live neonatal telemetry, AI insights, and actuator control in one place."
       />
+      {error && (
+        <Alert severity="error" variant="outlined">
+          {error}
+        </Alert>
+      )}
       <Card
         sx={{
           background: 'linear-gradient(120deg, rgba(37,99,235,0.12), rgba(14,165,233,0.12))',

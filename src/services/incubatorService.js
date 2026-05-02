@@ -1,19 +1,12 @@
-import {
-  getDocument,
-  subscribeToDocument,
-  subscribeToCollection,
-  getDocuments,
-  setDocument,
-} from '../firebase/firestore'
+import { apiRequest, asResult } from './apiClient'
 
 /**
  * Incubator data-access layer.
  *
- * This module is the single place where the UI talks to Firestore for incubator-related
- * data. Keeping the Firestore "shape" here makes pages/components simpler and lets you
- * change document paths without touching UI code.
+ * This module is the single place where the UI talks to the backend for incubator-related
+ * data. Keeping the backend response shape here keeps pages/components simple.
  *
- * Firestore layout used by this app:
+ * Backend Firestore layout used by this app:
  * - `incubator/liveData`     : latest telemetry snapshot (temperature, humidity, etc.)
  * - `incubator/actuators`    : current actuator states (heater/fan/humidifier/buzzer/light)
  * - `incubator/settings`     : setpoints + safe ranges + notification preferences
@@ -22,33 +15,55 @@ import {
  * - `incubator_alerts/*`     : optional per-alert documents (stream-friendly)
  * - `incubator_reports/*`    : optional per-report documents (stream-friendly)
  */
-const COLLECTION = 'incubator'
-const ALERT_COLLECTIONS = ['incubator_alerts', 'alerts']
-const REPORT_COLLECTIONS = ['incubator_reports', 'reports']
+const POLL_INTERVAL_MS = Number(import.meta.env?.VITE_INCUBATOR_POLL_INTERVAL_MS || 3000)
 
 /**
  * Real-time telemetry subscription.
  * The UI expects trend arrays to always exist (even when empty), so we normalize here.
  */
-export const subscribeToLiveData = (callback) => {
-  return subscribeToDocument(COLLECTION, 'liveData', (doc, error) => {
-    if (error || !doc) {
-      callback({ data: null, error })
-      return
+export const subscribeToIncubatorSnapshot = (callback) => {
+  let isActive = true
+  let timeoutId
+  let controller
+
+  const poll = async () => {
+    if (!isActive) return
+    controller?.abort()
+    controller = new AbortController()
+
+    try {
+      const response = await apiRequest('/api/incubator/snapshot', {
+        signal: controller.signal,
+      })
+      if (!isActive) return
+      callback({ data: normalizeSnapshot(response?.data), error: null })
+    } catch (error) {
+      if (!isActive || error.name === 'AbortError') return
+      callback({ data: null, error: error.message })
+    } finally {
+      if (isActive) {
+        timeoutId = window.setTimeout(poll, POLL_INTERVAL_MS)
+      }
     }
-    callback({ data: normalizeLiveData(doc), error: null })
-  })
+  }
+
+  poll()
+
+  return () => {
+    isActive = false
+    if (timeoutId) window.clearTimeout(timeoutId)
+    controller?.abort()
+  }
 }
 
 /**
  * One-shot telemetry fetch (useful for non-reactive screens or initial hydration).
  */
 export const fetchLiveDataOnce = async () => {
-  const result = await getDocument(COLLECTION, 'liveData')
-  if (result.success && result.data) {
-    return { success: true, data: normalizeLiveData(result.data) }
-  }
-  return { success: true, data: null }
+  return asResult(async () => {
+    const response = await apiRequest('/api/incubator/live-data')
+    return { data: response?.data ? normalizeLiveData(response.data) : null }
+  })
 }
 
 /**
@@ -56,12 +71,8 @@ export const fetchLiveDataOnce = async () => {
  * The dashboard toggles rely on this document to reflect device/controller state.
  */
 export const subscribeToActuators = (callback) => {
-  return subscribeToDocument(COLLECTION, 'actuators', (doc, error) => {
-    if (error || !doc) {
-      callback(null)
-      return
-    }
-    callback(doc)
+  return pollEndpoint('/api/incubator/actuators', (data, error) => {
+    callback(error ? null : data)
   })
 }
 
@@ -70,14 +81,24 @@ export const subscribeToActuators = (callback) => {
  * Example: updateActuator('heater', true)
  */
 export const updateActuator = async (name, value) => {
-  return setDocument(COLLECTION, 'actuators', { [name]: value }, true)
+  return asResult(() =>
+    apiRequest('/api/incubator/actuators', {
+      method: 'PATCH',
+      body: { [name]: value },
+    })
+  )
 }
 
 /**
  * Update operating mode (stored on `incubator/liveData` for convenience).
  */
 export const updateMode = async (mode) => {
-  return setDocument(COLLECTION, 'liveData', { mode }, true)
+  return asResult(() =>
+    apiRequest('/api/incubator/live-data', {
+      method: 'PATCH',
+      body: { mode },
+    })
+  )
 }
 
 /**
@@ -85,19 +106,20 @@ export const updateMode = async (mode) => {
  * Used by both the dashboard setpoint widgets and the Settings page.
  */
 export const updateSetpoints = async (setpoints) => {
-  return setDocument(COLLECTION, 'settings', setpoints, true)
+  return asResult(() =>
+    apiRequest('/api/incubator/settings', {
+      method: 'PATCH',
+      body: setpoints,
+    })
+  )
 }
 
 /**
  * Real-time settings subscription.
  */
 export const subscribeToSettings = (callback) => {
-  return subscribeToDocument(COLLECTION, 'settings', (doc, error) => {
-    if (error || !doc) {
-      callback(null)
-      return
-    }
-    callback(doc)
+  return pollEndpoint('/api/incubator/settings', (data, error) => {
+    callback(error ? null : data)
   })
 }
 
@@ -109,22 +131,8 @@ export const subscribeToSettings = (callback) => {
  * This function prefers the batched doc (when present) and falls back to the collection.
  */
 export const fetchAlerts = async () => {
-  let alerts = []
-  const docResult = await getDocument(COLLECTION, 'alerts')
-  if (docResult.success && docResult.data?.entries) {
-    alerts = docResult.data.entries
-  }
-  if (!alerts.length) {
-    for (const collectionName of ALERT_COLLECTIONS) {
-      const collectionResult = await getDocuments(collectionName)
-      if (collectionResult.success && collectionResult.data?.length) {
-        alerts = collectionResult.data
-        break
-      }
-    }
-  }
-
-  return alerts
+  const response = await apiRequest('/api/incubator/alerts')
+  return response?.data || []
 }
 
 /**
@@ -134,37 +142,9 @@ export const fetchAlerts = async () => {
  * This supports different backend pipelines without changing the UI.
  */
 export const subscribeToAlerts = (callback) => {
-  const unsubscribes = []
-
-  ALERT_COLLECTIONS.forEach((collectionName) => {
-    unsubscribes.push(
-      subscribeToCollection(collectionName, (docs, error) => {
-        if (error) {
-          callback([], error)
-          return
-        }
-        if (docs?.length) {
-          callback(docs)
-        }
-      })
-    )
+  return pollEndpoint('/api/incubator/alerts', (data, error) => {
+    callback(error ? [] : data || [], error)
   })
-
-  unsubscribes.push(
-    subscribeToDocument(COLLECTION, 'alerts', (doc) => {
-      if (doc?.entries?.length) {
-        callback(doc.entries)
-      } else {
-        callback([])
-      }
-    })
-  )
-
-  return () => {
-    unsubscribes.forEach((unsubscribe) => {
-      if (typeof unsubscribe === 'function') unsubscribe()
-    })
-  }
 }
 
 /**
@@ -175,17 +155,8 @@ export const subscribeToAlerts = (callback) => {
  * This function prefers the batched doc and falls back to the collection.
  */
 export const fetchReports = async () => {
-  const docResult = await getDocument(COLLECTION, 'reports')
-  if (docResult.success && docResult.data?.entries?.length) {
-    return docResult.data.entries
-  }
-  for (const collectionName of REPORT_COLLECTIONS) {
-    const collectionResult = await getDocuments(collectionName)
-    if (collectionResult.success && collectionResult.data?.length) {
-      return collectionResult.data
-    }
-  }
-  return []
+  const response = await apiRequest('/api/incubator/reports')
+  return response?.data || []
 }
 
 /**
@@ -193,11 +164,53 @@ export const fetchReports = async () => {
  * Without this, charts may crash or show inconsistent state when fields are missing.
  */
 const normalizeLiveData = (data) => {
+  if (!data) return null
   return {
     ...data,
     temperatureTrend: data.temperatureTrend || [],
     humidityTrend: data.humidityTrend || [],
     spo2Trend: data.spo2Trend || [],
     heartRateTrend: data.heartRateTrend || [],
+  }
+}
+
+const normalizeSnapshot = (snapshot = {}) => {
+  return {
+    ...snapshot,
+    liveData: normalizeLiveData(snapshot.liveData),
+    alerts: snapshot.alerts || [],
+  }
+}
+
+const pollEndpoint = (path, callback) => {
+  let isActive = true
+  let timeoutId
+  let controller
+
+  const poll = async () => {
+    if (!isActive) return
+    controller?.abort()
+    controller = new AbortController()
+
+    try {
+      const response = await apiRequest(path, { signal: controller.signal })
+      if (!isActive) return
+      callback(response?.data, null)
+    } catch (error) {
+      if (!isActive || error.name === 'AbortError') return
+      callback(null, error.message)
+    } finally {
+      if (isActive) {
+        timeoutId = window.setTimeout(poll, POLL_INTERVAL_MS)
+      }
+    }
+  }
+
+  poll()
+
+  return () => {
+    isActive = false
+    if (timeoutId) window.clearTimeout(timeoutId)
+    controller?.abort()
   }
 }

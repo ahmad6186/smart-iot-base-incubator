@@ -1,11 +1,4 @@
-const DEFAULT_API_BASE = 'http://localhost:5000'
-
-const stripTrailingSlash = (value) => value.replace(/\/+$/, '')
-
-const detectionApiBase =
-  typeof import.meta !== 'undefined' && import.meta.env?.VITE_DETECTION_API_URL
-    ? stripTrailingSlash(import.meta.env.VITE_DETECTION_API_URL)
-    : DEFAULT_API_BASE
+import { apiRequest } from './apiClient'
 
 /**
  * Fetch the latest presence inference from the Flask/OpenCV service.
@@ -18,18 +11,8 @@ const detectionApiBase =
  * }
  */
 export const fetchPresenceStatus = async ({ signal } = {}) => {
-  const response = await fetch(`${detectionApiBase}/api/presence`, {
-    headers: { Accept: 'application/json' },
-    signal,
-  })
-
-  if (!response.ok) {
-    const message = `Detection API error (${response.status})`
-    throw new Error(message)
-  }
-
-  const payload = await response.json()
-  return normalizePresencePayload(payload)
+  const response = await apiRequest('/api/presence', { signal })
+  return normalizePresencePayload(response?.data)
 }
 
 const normalizePresencePayload = (payload = {}) => {

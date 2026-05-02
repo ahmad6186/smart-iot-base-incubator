@@ -9,7 +9,7 @@ import Settings from './pages/Settings'
 import Camera from './pages/Camera'
 import About from './pages/About'
 import { onAuthChange } from './firebase/auth'
-import { getUserProfile } from './firebase/firestore'
+import { getCurrentUserProfile } from './services/userService'
 import { Box, CircularProgress } from '@mui/material'
 import DashboardLayout from './components/layout/DashboardLayout'
 import { AuthProvider } from './context/AuthContext'
@@ -26,7 +26,7 @@ function App() {
       setUser(currentUser)
 
       if (currentUser) {
-        const profileResult = await getUserProfile(currentUser.uid)
+        const profileResult = await getCurrentUserProfile()
         if (profileResult.success) {
           setProfile(profileResult.data)
         } else {
