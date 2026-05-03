@@ -10,6 +10,7 @@ import {
   Stack,
 } from '@mui/material'
 import dayjs from 'dayjs'
+import { panelSx } from '../common/surfaceStyles'
 
 const severityColors = {
   normal: 'success',
@@ -20,7 +21,7 @@ const severityColors = {
 
 function AlertsPanel({ alerts = [] }) {
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={panelSx}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">Latest Alerts</Typography>

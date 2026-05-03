@@ -15,10 +15,10 @@ function VitalCard({ title, value, unit, status = 'normal', icon, footer, min, m
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        borderRadius: 3,
-        backgroundColor: '#fff',
-        border: '1px solid rgba(15,23,42,0.06)',
-        boxShadow: '0 15px 30px rgba(15,23,42,0.04)',
+        border: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper',
+        boxShadow: '0 16px 32px rgba(15, 23, 42, 0.05)',
       }}
     >
       <CardContent>
@@ -38,11 +38,7 @@ function VitalCard({ title, value, unit, status = 'normal', icon, footer, min, m
             </Typography>
           )}
         </Box>
-        {icon && (
-          <Box sx={{ mt: 2, color: (theme) => theme.palette.primary.main }}>
-            {icon}
-          </Box>
-        )}
+        {icon && <Box sx={{ mt: 2, color: 'primary.main' }}>{icon}</Box>}
         {typeof min === 'number' && typeof max === 'number' && typeof value === 'number' && (
           <Box sx={{ mt: 2 }}>
             <LinearProgress

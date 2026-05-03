@@ -11,7 +11,7 @@ import { apiRequest, asResult } from './apiClient'
  * - `incubator/actuators`    : current actuator states (heater/fan/humidifier/buzzer/light)
  * - `incubator/settings`     : setpoints + safe ranges + notification preferences
  * - `incubator/alerts`       : optional "batched" alerts document { entries: [...] }
- * - `incubator/reports`      : optional "batched" reports document { entries: [...] }
+ * - `SensorLogs`             : time-series sensor log collection used for reports
  * - `incubator_alerts/*`     : optional per-alert documents (stream-friendly)
  * - `incubator_reports/*`    : optional per-report documents (stream-friendly)
  */
@@ -148,15 +148,16 @@ export const subscribeToAlerts = (callback) => {
 }
 
 /**
- * Reports can be stored as:
- * - A single batched doc `incubator/reports` with `entries: []`
- * - Many documents in `incubator_reports/*`
- *
- * This function prefers the batched doc and falls back to the collection.
+ * Fetch SensorLogs rows for a user-selected date/time range.
  */
-export const fetchReports = async () => {
-  const response = await apiRequest('/api/incubator/reports')
-  return response?.data || []
+export const fetchReports = async ({ from, to } = {}) => {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+
+  const query = params.toString()
+  const response = await apiRequest(`/api/incubator/reports${query ? `?${query}` : ''}`)
+  return response?.data || null
 }
 
 /**

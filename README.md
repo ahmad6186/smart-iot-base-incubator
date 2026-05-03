@@ -75,6 +75,8 @@ The frontend will be available at `http://localhost:5173`. The backend defaults 
 
 The frontend calls the backend API for application data. Data endpoints require a Firebase
 ID token. Admin-only writes also require the user's Firestore profile role to be `Admin`.
+The reports endpoint aggregates the `SensorLogs` collection into hourly, daily, weekly, or
+monthly buckets and returns chart-ready rows plus summary metrics.
 
 - `GET /api/health`
 - `GET|POST /api/users/me`
@@ -89,7 +91,7 @@ ID token. Admin-only writes also require the user's Firestore profile role to be
 - `GET /api/incubator/settings`
 - `PATCH /api/incubator/settings`
 - `GET /api/incubator/alerts`
-- `GET /api/incubator/reports`
+- `GET /api/incubator/reports?period=hourly|daily|weekly|monthly`
 - `GET /api/presence`
 
 ### Baby detection Flask service

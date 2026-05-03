@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:frontend": "vite",
     "dev:backend": ".venv/bin/python backend/app.py",
-    "backend:test": ".venv/bin/python -m unittest backend.test_validation",
+    "backend:test": ".venv/bin/python -m unittest discover -s backend -p 'test_*.py'",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -109,6 +109,7 @@ function Home() {
       <PageHeader
         title="NICU Control Center"
         subtitle="Live neonatal telemetry, AI insights, and actuator control in one place."
+        eyebrow="Dashboard"
       />
       {error && (
         <Alert severity="error" variant="outlined">
@@ -117,8 +118,9 @@ function Home() {
       )}
       <Card
         sx={{
-          background: 'linear-gradient(120deg, rgba(37,99,235,0.12), rgba(14,165,233,0.12))',
-          border: '1px solid rgba(37, 99, 235, 0.2)',
+          backgroundColor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'rgba(37, 99, 235, 0.16)',
         }}
       >
         <CardContent>

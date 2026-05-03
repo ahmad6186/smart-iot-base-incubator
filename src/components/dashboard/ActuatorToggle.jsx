@@ -1,4 +1,5 @@
 import { Card, CardContent, Typography, Switch, Stack, Chip } from '@mui/material'
+import { panelSx } from '../common/surfaceStyles'
 
 function ActuatorToggle({ label, value, onChange, description, disabled = false }) {
   const hasValue = value === true || value === false
@@ -6,7 +7,7 @@ function ActuatorToggle({ label, value, onChange, description, disabled = false 
   const chipColor = hasValue ? (value ? 'success' : 'default') : 'warning'
 
   return (
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
+    <Card sx={panelSx}>
       <CardContent>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack spacing={0.5}>

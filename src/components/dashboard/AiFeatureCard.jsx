@@ -1,8 +1,9 @@
 import { Card, CardContent, Typography, Chip, Stack } from '@mui/material'
+import { panelSx } from '../common/surfaceStyles'
 
 function AiFeatureCard({ title, description, status, insight }) {
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={panelSx}>
       <CardContent>
         <Stack spacing={1.5}>
           <Stack direction="row" alignItems="center" spacing={1}>

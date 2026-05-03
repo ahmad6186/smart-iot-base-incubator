@@ -1,5 +1,6 @@
 import { Card, CardContent, Typography, Slider, Stack, TextField, Button, InputAdornment } from '@mui/material'
 import { useEffect, useState } from 'react'
+import { panelSx } from '../common/surfaceStyles'
 
 function SetpointControl({ label, unit, value, range = [0, 100], onSave, disabled = false }) {
   const [setpoint, setSetpoint] = useState(value ?? range[0])
@@ -15,7 +16,7 @@ function SetpointControl({ label, unit, value, range = [0, 100], onSave, disable
   }
 
   return (
-    <Card variant="outlined" sx={{ borderRadius: 3 }}>
+    <Card sx={panelSx}>
       <CardContent>
         <Stack spacing={2}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>

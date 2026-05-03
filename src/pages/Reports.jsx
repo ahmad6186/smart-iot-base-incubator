@@ -1,219 +1,357 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  Stack,
-  Typography,
+  Alert as MuiAlert,
+  Box,
+  Button,
   Card,
   CardContent,
+  CircularProgress,
+  Divider,
+  FormControl,
   Grid,
-  Button,
-  Chip,
-  Alert as MuiAlert,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  TextField,
+  Typography,
+  Chip,
 } from '@mui/material'
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import dayjs from 'dayjs'
-import TrendChart from '../components/charts/TrendChart'
-import { fetchReports } from '../services/incubatorService'
 import PageHeader from '../components/common/PageHeader'
+import ReportSummaryCards from '../components/reports/ReportSummaryCards'
+import ReportCharts from '../components/reports/ReportCharts'
+import AISummaryCard from '../components/reports/AISummaryCard'
+import { REPORT_RANGE_OPTIONS, fetchSensorLogsReport } from '../services/reportService'
 
 function Reports() {
-  const [reports, setReports] = useState([])
+  const [rangeKey, setRangeKey] = useState('all')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
+  const [appliedRange, setAppliedRange] = useState({ rangeKey: 'all' })
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let active = true
+
     const loadReports = async () => {
+      setLoading(true)
+      setError(null)
       try {
-        const data = await fetchReports()
-        setReports(data)
+        const data = await fetchSensorLogsReport(appliedRange)
+        if (!active) return
+        setReport(data)
       } catch (err) {
+        if (!active) return
+        setReport(null)
         setError(err.message)
+      } finally {
+        if (active) setLoading(false)
       }
     }
+
     loadReports()
-  }, [])
+    return () => {
+      active = false
+    }
+  }, [appliedRange])
 
-  const normalizedReports = useMemo(
-    () =>
-      reports.map((report) => ({
-        id: report.id,
-        weekRange: report.weekRange || report.period || 'Week',
-        avgTemperature:
-          report.avgTemperature ??
-          report.averageTemperature ??
-          null,
-        avgHumidity:
-          report.avgHumidity ??
-          report.averageHumidity ??
-          null,
-        avgSpo2:
-          report.avgSpo2 ??
-          report.averageSpo2 ??
-          null,
-        avgHeartRate:
-          report.avgHeartRate ??
-          report.averageHeartRate ??
-          null,
-        alertsCount: report.alertsCount ?? report.alertCount ?? 0,
-        compliance: report.compliance ?? null,
-        aiSummary: report.aiSummary || 'No AI summary provided.',
-        createdAt: report.createdAt || null,
-      })),
-    [reports]
-  )
+  const rows = report?.logs || []
+  const alerts = report?.alerts || []
+  const summary = report?.summary || {
+    totalLogs: 0,
+    safeLogs: 0,
+    compliancePercentage: 0,
+    avgTemperature: null,
+    avgHumidity: null,
+    avgSpo2: null,
+    avgHeartRate: null,
+    avgNoiseLevel: null,
+  }
+  const rangeLabel = report?.rangeLabel || 'Last 7 days'
+  const statusLabel = report?.statusLabel || 'Warning'
+  const statusColor = report?.statusColor || 'warning'
 
-  const latest = normalizedReports[0]
+  const handleRangeChange = (event) => {
+    const nextRange = event.target.value
+    setRangeKey(nextRange)
+    setError(null)
+    if (nextRange !== 'custom') {
+      setAppliedRange({ rangeKey: nextRange })
+    }
+  }
 
-  const temperatureTrend = useMemo(
-    () =>
-      normalizedReports.map((report, idx) => ({
-        timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.avgTemperature,
-      })),
-    [normalizedReports]
-  )
-  const humidityTrend = useMemo(
-    () =>
-      normalizedReports.map((report, idx) => ({
-        timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.avgHumidity,
-      })),
-    [normalizedReports]
-  )
-  const spo2Trend = useMemo(
-    () =>
-      normalizedReports.map((report, idx) => ({
-        timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.avgSpo2,
-      })),
-    [normalizedReports]
-  )
-  const heartRateTrend = useMemo(
-    () =>
-      normalizedReports.map((report, idx) => ({
-        timestamp: report.createdAt || dayjs().subtract(idx, 'week').toISOString(),
-        value: report.avgHeartRate,
-      })),
-    [normalizedReports]
-  )
+  const handleApplyCustom = (event) => {
+    event.preventDefault()
+    if (!customFrom || !customTo) {
+      setError('Select both the start and end date/time for the custom range.')
+      return
+    }
+
+    const from = dayjs(customFrom)
+    const to = dayjs(customTo)
+    if (!from.isValid() || !to.isValid()) {
+      setError('Select valid custom date/time values.')
+      return
+    }
+    if (to.isBefore(from)) {
+      setError('The end date/time must be after the start date/time.')
+      return
+    }
+
+    setAppliedRange({
+      rangeKey: 'custom',
+      customFrom,
+      customTo,
+    })
+  }
+
+  const handleReset = () => {
+    setRangeKey('all')
+    setCustomFrom('')
+    setCustomTo('')
+    setError(null)
+    setAppliedRange({ rangeKey: 'all' })
+  }
+
+  const formatTableDate = (row) => {
+    const candidate = row.timestamp || row.sourceDateTime
+    if (!candidate) return '--'
+
+    const parsed = dayjs(candidate, ['MM/DD/YYYY HH:mm:ss', 'MM/DD/YYYY HH:mm', 'MM/DD/YYYY'], true)
+    return parsed.isValid() ? parsed.format('DD MMM YYYY, h:mm A') : String(candidate)
+  }
+  const formatCellValue = (value, unit) => {
+    if (value == null) return '--'
+    return typeof value === 'number' ? `${value} ${unit}` : value
+  }
 
   return (
     <Stack spacing={3}>
       <PageHeader
-        title="Weekly Reports"
-        subtitle="Aggregated vitals, alert frequency, and AI assessments."
+        title="Reports"
+        subtitle="Firestore SensorLogs for the selected range."
         action={
-          <Button variant="contained" color="secondary">
-            Export (soon)
+          <Button variant="outlined" startIcon={<PictureAsPdfOutlinedIcon />} disabled>
+            Export PDF
           </Button>
         }
       />
 
       {error && <MuiAlert severity="error">{error}</MuiAlert>}
 
-      {latest && (
-        <Grid container spacing={2} alignItems="stretch">
-          <Grid item xs={12} md={3}>
-            <SummaryCard title="Average Temperature" value={formatMetric(latest.avgTemperature, '°C')} />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <SummaryCard title="Average Humidity" value={formatMetric(latest.avgHumidity, '%')} />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <SummaryCard title="Compliance" value={formatMetric(latest.compliance, '%')} />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <SummaryCard title="Alerts" value={latest.alertsCount} />
-          </Grid>
-        </Grid>
-      )}
-
-      <Grid container spacing={2} alignItems="stretch">
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Temperature Trend" data={temperatureTrend} unit="°C" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Humidity Trend" data={humidityTrend} unit="%" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="SpO₂ Trend" data={spo2Trend} unit="%" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Heart Rate Trend" data={heartRateTrend} unit="bpm" />
-        </Grid>
-      </Grid>
-
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Report History
-          </Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Week</TableCell>
-                <TableCell>Avg Temp (°C)</TableCell>
-                <TableCell>Avg Humidity (%)</TableCell>
-                <TableCell>Avg SpO₂ (%)</TableCell>
-                <TableCell>Avg Heart Rate</TableCell>
-                <TableCell>Alerts</TableCell>
-                <TableCell>Compliance</TableCell>
-                <TableCell>AI Summary</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {normalizedReports.map((report) => (
-                <TableRow key={report.id || report.weekRange}>
-                  <TableCell>{report.weekRange}</TableCell>
-                  <TableCell>{formatMetric(report.avgTemperature, '°C')}</TableCell>
-                  <TableCell>{formatMetric(report.avgHumidity, '%')}</TableCell>
-                  <TableCell>{formatMetric(report.avgSpo2, '%')}</TableCell>
-                  <TableCell>{formatMetric(report.avgHeartRate, 'bpm')}</TableCell>
-                  <TableCell>
-                    <Chip label={report.alertsCount} color="primary" variant="outlined" size="small" />
-                  </TableCell>
-                  <TableCell>{formatMetric(report.compliance, '%')}</TableCell>
-                  <TableCell>{report.aiSummary}</TableCell>
-                </TableRow>
-              ))}
-              {!normalizedReports.length && (
-                <TableRow>
-                  <TableCell colSpan={8}>
-                    <Typography variant="body2" color="text.secondary">
-                      No reports generated yet. Once AI summaries are produced they will appear here.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
+              <Typography variant="h6">Report Range</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip label={rangeLabel} variant="outlined" />
+                <Chip label={`${summary.totalLogs} logs`} color="primary" variant="outlined" />
+              </Stack>
+            </Stack>
+
+            <Grid container spacing={2} alignItems="end">
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="report-range-label">Range</InputLabel>
+                  <Select
+                    labelId="report-range-label"
+                    value={rangeKey}
+                    label="Range"
+                    onChange={handleRangeChange}
+                  >
+                    {REPORT_RANGE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {rangeKey === 'custom' && (
+                <>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="datetime-local"
+                      label="From"
+                      value={customFrom}
+                      onChange={(event) => setCustomFrom(event.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="datetime-local"
+                      label="To"
+                      value={customTo}
+                      onChange={(event) => setCustomTo(event.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={2}>
+                    <Button variant="contained" fullWidth onClick={handleApplyCustom}>
+                      Apply
+                    </Button>
+                  </Grid>
+                </>
               )}
-            </TableBody>
-          </Table>
+
+              <Grid item xs={12} md={rangeKey === 'custom' ? 12 : 8}>
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <Button variant="outlined" startIcon={<RestartAltIcon />} onClick={handleReset}>
+                    Reset
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Stack>
         </CardContent>
       </Card>
+
+      {loading ? (
+        <Stack alignItems="center" sx={{ py: 8 }}>
+          <CircularProgress />
+        </Stack>
+      ) : rows.length ? (
+        <Stack spacing={3}>
+          <ReportSummaryCards
+            summary={summary}
+            rangeLabel={rangeLabel}
+            statusLabel={statusLabel}
+            statusColor={statusColor}
+          />
+
+          <ReportCharts series={report.chartSeries} />
+
+          <Grid container spacing={2} alignItems="stretch">
+            <Grid item xs={12}>
+              <AISummaryCard
+                summaryText={report.aiSummary}
+                statusLabel={statusLabel}
+                rangeLabel={rangeLabel}
+                highlights={alerts}
+              />
+            </Grid>
+          </Grid>
+
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  justifyContent="space-between"
+                >
+                  <Typography variant="h6">Alerts Summary</Typography>
+                  <Chip
+                    label={alerts.length ? `${alerts.length} alerts` : 'No alerts'}
+                    color={alerts.length ? 'warning' : 'success'}
+                    variant="outlined"
+                  />
+                </Stack>
+
+                <Divider />
+
+                {alerts.length ? (
+                  <Stack spacing={1.5}>
+                    {alerts.map((alert) => (
+                      <Stack
+                        key={alert.key}
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                        justifyContent="space-between"
+                        sx={{ p: 1.5, borderRadius: 1, backgroundColor: 'grey.50' }}
+                      >
+                        <Stack spacing={0.5}>
+                          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                            <Typography variant="body2" fontWeight={700}>
+                              {alert.label}
+                            </Typography>
+                            <Chip
+                              label={alert.severity === 'critical' ? 'Critical' : 'Warning'}
+                              color={alert.severity === 'critical' ? 'error' : 'warning'}
+                              size="small"
+                            />
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">
+                            {alert.detail}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" fontWeight={700}>
+                          {alert.count}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                ) : (
+                  <MuiAlert severity="success">No unsafe values were detected in this range.</MuiAlert>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6">Sensor Logs</Typography>
+                <Box sx={{ overflowX: 'auto' }}>
+                  <Table size="small" sx={{ minWidth: 960 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date and Time</TableCell>
+                        <TableCell>Temperature</TableCell>
+                        <TableCell>Humidity</TableCell>
+                        <TableCell>SpO2</TableCell>
+                        <TableCell>Heart Rate</TableCell>
+                        <TableCell>Noise Level</TableCell>
+                        <TableCell>Cry Status</TableCell>
+                        <TableCell>Presence Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {rows.map((row) => (
+                        <TableRow key={row.id} hover>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={700}>
+                              {formatTableDate(row)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{formatCellValue(row.temperature, 'C')}</TableCell>
+                          <TableCell>{formatCellValue(row.humidity, '%')}</TableCell>
+                          <TableCell>{formatCellValue(row.spo2, '%')}</TableCell>
+                          <TableCell>{formatCellValue(row.heartRate, 'bpm')}</TableCell>
+                          <TableCell>{formatCellValue(row.noiseLevel, 'dB')}</TableCell>
+                          <TableCell>{row.cryStatus || '--'}</TableCell>
+                          <TableCell>{row.presenceStatus || '--'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Stack>
+      ) : (
+        <MuiAlert severity="info">No SensorLogs data found for this range.</MuiAlert>
+      )}
     </Stack>
   )
-}
-
-const SummaryCard = ({ title, value }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Typography variant="body2" color="text.secondary">
-        {title}
-      </Typography>
-      <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
-        {value ?? '--'}
-      </Typography>
-    </CardContent>
-  </Card>
-)
-
-const formatMetric = (value, unit) => {
-  if (value == null) return '--'
-  if (typeof value === 'number') {
-    return unit ? `${value} ${unit}` : value
-  }
-  return value
 }
 
 export default Reports

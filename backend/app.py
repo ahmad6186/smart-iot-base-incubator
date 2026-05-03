@@ -36,6 +36,11 @@ except ImportError:
         validate_uid,
     )
 
+try:
+    from .reports import build_sensor_report_rows
+except ImportError:
+    from reports import build_sensor_report_rows
+
 
 DEFAULT_ALLOWED_ORIGINS = {
     "http://localhost:5173",
@@ -223,7 +228,13 @@ def create_app():
     @app.get("/api/incubator/reports")
     @require_auth
     def reports():
-        return success(read_reports())
+        sensor_logs = read_sensor_logs()
+        start_at = request.args.get("from")
+        end_at = request.args.get("to")
+        if start_at is not None or end_at is not None:
+            return success(build_sensor_report_rows(sensor_logs, start_at=start_at, end_at=end_at))
+
+        return success(build_sensor_report_rows(sensor_logs))
 
     @app.get("/api/presence")
     @require_auth
@@ -417,6 +428,17 @@ def read_reports():
     if batched:
         return batched
     return read_first_non_empty_collection(REPORT_COLLECTIONS)
+
+
+def read_sensor_logs():
+    db = get_db()
+    logs = []
+    for doc in db.collection("SensorLogs").stream():
+        data = document_to_dict(doc)
+        if data:
+            logs.append(data)
+    logs.sort(key=lambda item: item.get("DateTime") or item.get("timestamp") or "")
+    return logs
 
 
 def read_batched_entries(document_id):

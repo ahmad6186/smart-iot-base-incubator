@@ -68,6 +68,7 @@ function DashboardLayout({ user, profile }) {
         sx={{
           p: 3,
           borderBottom: '1px solid rgba(15,23,42,0.08)',
+          backgroundColor: 'rgba(37, 99, 235, 0.03)',
         }}
       >
         <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
@@ -136,7 +137,7 @@ function DashboardLayout({ user, profile }) {
           borderBottom: '1px solid rgba(15,23,42,0.08)',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: 72 }}>
           {isMdDown && (
             <IconButton
               color="inherit"
@@ -189,10 +190,11 @@ function DashboardLayout({ user, profile }) {
           px: { xs: 2, md: 4 },
           py: { xs: 2, md: 4 },
           width: { md: `calc(100% - ${drawerWidth}px)` },
+          backgroundColor: 'background.default',
         }}
       >
         <Toolbar />
-        <Box sx={{ mt: { xs: 2, md: 3 } }}>
+        <Box sx={{ mt: { xs: 2, md: 3 }, maxWidth: 1600 }}>
           <Outlet />
         </Box>
       </Box>
