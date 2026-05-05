@@ -194,7 +194,17 @@ function DashboardLayout({ user, profile }) {
         }}
       >
         <Toolbar />
-        <Box sx={{ mt: { xs: 2, md: 3 }, maxWidth: 1600 }}>
+        <Box
+          sx={{
+            mt: { xs: 2, md: 3 },
+            width: '100%',
+            maxWidth: 1600,
+            mx: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
           <Outlet />
         </Box>
       </Box>
