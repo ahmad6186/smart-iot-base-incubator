@@ -1,20 +1,57 @@
 import { Grid } from '@mui/material'
-import TrendChart from '../charts/TrendChart'
+import ReadingsOverviewChart from '../charts/ReadingsOverviewChart'
 
 function ReportCharts({ series }) {
   return (
     <Grid container spacing={2} alignItems="stretch">
-      <Grid item xs={12} lg={6}>
-        <TrendChart title="Temperature Trend" data={series.temperature} unit="°C" />
-      </Grid>
-      <Grid item xs={12} lg={6}>
-        <TrendChart title="Humidity Trend" data={series.humidity} unit="%" />
-      </Grid>
-      <Grid item xs={12} lg={6}>
-        <TrendChart title="SpO2 Trend" data={series.spo2} unit="%" />
-      </Grid>
-      <Grid item xs={12} lg={6}>
-        <TrendChart title="Heart Rate Trend" data={series.heartRate} unit="bpm" />
+      <Grid item xs={12}>
+        <ReadingsOverviewChart
+          title="All Sensor Readings"
+          subtitle="Report readings combined in one chart for the selected range."
+          fullBleed
+          metrics={[
+            {
+              key: 'temperature',
+              label: 'Temperature',
+              unit: '°C',
+              color: '#ef4444',
+              yAxisId: 'left',
+              data: series.temperature,
+            },
+            {
+              key: 'humidity',
+              label: 'Humidity',
+              unit: '%',
+              color: '#0ea5e9',
+              yAxisId: 'left',
+              data: series.humidity,
+            },
+            {
+              key: 'spo2',
+              label: 'SpO2',
+              unit: '%',
+              color: '#22c55e',
+              yAxisId: 'left',
+              data: series.spo2,
+            },
+            {
+              key: 'heartRate',
+              label: 'Heart Rate',
+              unit: 'bpm',
+              color: '#8b5cf6',
+              yAxisId: 'right',
+              data: series.heartRate,
+            },
+            {
+              key: 'noiseLevel',
+              label: 'Noise Level',
+              unit: 'dB',
+              color: '#f97316',
+              yAxisId: 'left',
+              data: series.noiseLevel,
+            },
+          ]}
+        />
       </Grid>
     </Grid>
   )

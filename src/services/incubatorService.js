@@ -150,8 +150,9 @@ export const subscribeToAlerts = (callback) => {
 /**
  * Fetch SensorLogs rows for a user-selected date/time range.
  */
-export const fetchReports = async ({ from, to } = {}) => {
+export const fetchReports = async ({ rangeKey, from, to } = {}) => {
   const params = new URLSearchParams()
+  if (rangeKey) params.set('rangeKey', rangeKey)
   if (from) params.set('from', from)
   if (to) params.set('to', to)
 
@@ -172,6 +173,7 @@ const normalizeLiveData = (data) => {
     humidityTrend: data.humidityTrend || [],
     spo2Trend: data.spo2Trend || [],
     heartRateTrend: data.heartRateTrend || [],
+    noiseTrend: data.noiseTrend || [],
   }
 }
 
