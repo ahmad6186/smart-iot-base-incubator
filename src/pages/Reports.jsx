@@ -25,11 +25,14 @@ import {
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 import PageHeader from '../components/common/PageHeader'
 import ReportSummaryCards from '../components/reports/ReportSummaryCards'
 import ReportCharts from '../components/reports/ReportCharts'
 import AISummaryCard from '../components/reports/AISummaryCard'
 import { REPORT_RANGE_OPTIONS, fetchSensorLogsReport } from '../services/reportService'
+
+dayjs.extend(customParseFormat)
 
 function Reports() {
   const [rangeKey, setRangeKey] = useState('all')

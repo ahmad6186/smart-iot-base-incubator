@@ -37,9 +37,9 @@ except ImportError:
     )
 
 try:
-    from .reports import build_sensor_report_rows
+    from .reports import build_sensor_logs_report
 except ImportError:
-    from reports import build_sensor_report_rows
+    from reports import build_sensor_logs_report
 
 
 DEFAULT_ALLOWED_ORIGINS = {
@@ -231,10 +231,20 @@ def create_app():
         sensor_logs = read_sensor_logs()
         start_at = request.args.get("from")
         end_at = request.args.get("to")
-        if start_at is not None or end_at is not None:
-            return success(build_sensor_report_rows(sensor_logs, start_at=start_at, end_at=end_at))
-
-        return success(build_sensor_report_rows(sensor_logs))
+        range_key = request.args.get("rangeKey") or request.args.get("range")
+        if not range_key and (start_at is not None or end_at is not None):
+            range_key = "custom"
+        try:
+            return success(
+                build_sensor_logs_report(
+                    sensor_logs,
+                    range_key=range_key or "all",
+                    start_at=start_at,
+                    end_at=end_at,
+                )
+            )
+        except ValueError as error:
+            return failure(str(error), 400)
 
     @app.get("/api/presence")
     @require_auth

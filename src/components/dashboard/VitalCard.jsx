@@ -1,4 +1,4 @@
-import { Card, CardContent, Typography, Box, Chip, LinearProgress } from '@mui/material'
+import { Card, CardContent, Typography, Box, Chip, Stack } from '@mui/material'
 
 const statusColors = {
   normal: 'success',
@@ -12,50 +12,52 @@ function VitalCard({ title, value, unit, status = 'normal', icon, footer, min, m
   return (
     <Card
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
         height: '100%',
-        border: '1px solid',
-        borderColor: 'divider',
+        border: status === 'normal' ? '1px solid transparent' : '1px solid',
+        borderColor: status === 'normal' ? 'divider' : `${color}.main`,
         backgroundColor: 'background.paper',
-        boxShadow: '0 16px 32px rgba(15, 23, 42, 0.05)',
       }}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            {title}
-          </Typography>
-          <Chip label={status} color={color} size="small" sx={{ textTransform: 'capitalize' }} />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 2 }}>
-          <Typography variant="h3" component="span" sx={{ fontWeight: 700 }}>
-            {value ?? '--'}
-          </Typography>
-          {unit && (
-            <Typography variant="h6" component="span" color="text.secondary">
-              {unit}
+      <CardContent sx={{ height: '100%' }}>
+        <Stack spacing={1.5} sx={{ height: '100%' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: status === 'normal' ? 'text.secondary' : `${color}.main`,
+                backgroundColor: status === 'normal' ? 'grey.100' : 'rgba(37, 99, 235, 0.08)',
+              }}
+            >
+              {icon}
+            </Box>
+            <Chip label={status} color={color} size="small" sx={{ textTransform: 'capitalize' }} />
+          </Stack>
+
+          <Stack spacing={0.5}>
+            <Typography variant="body2" color="text.secondary">
+              {title}
             </Typography>
-          )}
-        </Box>
-        {icon && <Box sx={{ mt: 2, color: 'primary.main' }}>{icon}</Box>}
-        {typeof min === 'number' && typeof max === 'number' && typeof value === 'number' && (
-          <Box sx={{ mt: 2 }}>
-            <LinearProgress
-              variant="determinate"
-              color={color}
-              value={Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))}
-            />
-            <Typography variant="caption" color="text.secondary">
-              Safe range: {min} - {max} {unit}
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              {value ?? '--'} {unit || ''}
             </Typography>
-          </Box>
-        )}
-        {footer && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            {footer}
-          </Typography>
-        )}
+            {typeof min === 'number' && typeof max === 'number' ? (
+              <Typography variant="caption" color="text.secondary">
+                Safe range {min} - {max} {unit}
+              </Typography>
+            ) : (
+              footer && (
+                <Typography variant="caption" color="text.secondary">
+                  {footer}
+                </Typography>
+              )
+            )}
+          </Stack>
+        </Stack>
       </CardContent>
     </Card>
   )

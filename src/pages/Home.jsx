@@ -24,7 +24,6 @@ import WifiTetheringIcon from '@mui/icons-material/WifiTethering'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import dayjs from 'dayjs'
 import VitalCard from '../components/dashboard/VitalCard'
-import TrendChart from '../components/charts/TrendChart'
 import AlertsPanel from '../components/dashboard/AlertsPanel'
 import ActuatorToggle from '../components/dashboard/ActuatorToggle'
 import SetpointControl from '../components/dashboard/SetpointControl'
@@ -107,8 +106,8 @@ function Home() {
   return (
     <Stack spacing={3}>
       <PageHeader
-        title="NICU Control Center"
-        subtitle="Live neonatal telemetry, AI insights, and actuator control in one place."
+        title="Dashboard"
+        subtitle="Live incubator readings, actuator state, and alerts."
         eyebrow="Dashboard"
       />
       {error && (
@@ -116,30 +115,19 @@ function Home() {
           {error}
         </Alert>
       )}
-      <Card
-        sx={{
-          backgroundColor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'rgba(37, 99, 235, 0.16)',
-        }}
-      >
+      <Card>
         <CardContent>
           <Stack spacing={2}>
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                  Device status: {connectionStatus}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {lastUpdatedText}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
+              <Typography variant="h6">Live Snapshot</Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <Chip
                   icon={<WifiTetheringIcon />}
                   label={connectionStatus === 'Online' ? 'Connected' : 'Awaiting device'}
                   color={connectionStatus === 'Online' ? 'success' : 'warning'}
+                  variant={connectionStatus === 'Online' ? 'filled' : 'outlined'}
                 />
+                <Chip label={`Mode: ${liveData?.mode || 'Unknown'}`} variant="outlined" />
                 <Chip
                   icon={<NotificationsActiveIcon />}
                   label={`${alerts.length} alerts`}
@@ -148,10 +136,33 @@ function Home() {
                 />
               </Stack>
             </Stack>
-            <Typography variant="body1">
-              Keep an eye on thermal comfort, respiratory health, and environmental stability. Switch
-              between auto and manual modes without leaving this control center.
-            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="text.secondary">
+                  Last update
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  {lastUpdatedText}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="text.secondary">
+                  Controller mode
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  {liveData?.mode || 'Unknown'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="text.secondary">
+                  Active alerts
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                  {alerts.length}
+                </Typography>
+              </Grid>
+            </Grid>
           </Stack>
         </CardContent>
       </Card>
@@ -162,6 +173,15 @@ function Home() {
       )}
 
       <Grid container spacing={2} alignItems="stretch">
+        <Grid item xs={12}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
+            <Typography variant="h6">Current Readings</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip label={connectionStatus} color={connectionStatus === 'Online' ? 'success' : 'warning'} />
+              <Chip label={`${alerts.length} alerts`} variant="outlined" />
+            </Stack>
+          </Stack>
+        </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <VitalCard
             title="Temperature"
@@ -249,27 +269,15 @@ function Home() {
         </Grid>
       </Grid>
 
-      <Grid container spacing={2} alignItems="stretch">
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Temperature Trend" data={liveData?.temperatureTrend || []} unit="°C" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Humidity Trend" data={liveData?.humidityTrend || []} unit="%" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="SpO₂ Trend" data={liveData?.spo2Trend || []} unit="%" />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TrendChart title="Heart Rate Trend" data={liveData?.heartRateTrend || []} unit="bpm" />
-        </Grid>
-      </Grid>
-
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">Mode & Controls</Typography>
+                <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6">Mode & Controls</Typography>
+                  <Chip label={canControl ? 'Admin' : 'Read only'} color={canControl ? 'primary' : 'default'} size="small" />
+                </Stack>
                 <ToggleButtonGroup
                   exclusive
                   value={liveData?.mode ?? null}
@@ -340,7 +348,10 @@ function Home() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">Setpoints</Typography>
+                <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6">Setpoints</Typography>
+                  <Chip label={settings ? 'Configured' : 'Waiting'} color={settings ? 'primary' : 'default'} size="small" variant="outlined" />
+                </Stack>
                 {settings ? (
                   <>
                     <SetpointControl
