@@ -147,8 +147,6 @@ function Alerts() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Type</TableCell>
-                <TableCell>Severity</TableCell>
                 <TableCell>Message</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Time</TableCell>
@@ -157,20 +155,6 @@ function Alerts() {
             <TableBody>
               {filteredAlerts.map((alert) => (
                 <TableRow key={alert.id}>
-                  <TableCell>{alert.type}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={alert.severity}
-                      color={
-                        alert.severity === 'critical'
-                          ? 'error'
-                          : alert.severity === 'warning'
-                            ? 'warning'
-                            : 'success'
-                      }
-                      size="small"
-                    />
-                  </TableCell>
                   <TableCell>{alert.message}</TableCell>
                   <TableCell>
                     <Chip
@@ -188,7 +172,7 @@ function Alerts() {
               ))}
               {!filteredAlerts.length && (
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={3}>
                     <Typography variant="body2" color="text.secondary">
                       No alerts match the selected filters.
                     </Typography>

@@ -6,6 +6,8 @@ VALID_MODES = {"Auto", "Manual"}
 ALLOWED_ACTUATORS = {"heater", "fan", "humidifier", "buzzer", "light"}
 ALLOWED_SETTINGS_KEYS = {
     "temperatureSetpoint",
+    "minTemp",
+    "maxTemp",
     "humiditySetpoint",
     "safeRanges",
     "notificationPreferences",
@@ -107,7 +109,7 @@ def validate_settings_update(payload):
 
     cleaned = {}
     for key, value in payload.items():
-        if key in {"temperatureSetpoint", "humiditySetpoint"}:
+        if key in {"temperatureSetpoint", "humiditySetpoint", "minTemp", "maxTemp"}:
             number, error = _finite_number(value, key)
             if error:
                 return None, error
@@ -127,6 +129,10 @@ def validate_settings_update(payload):
                 return None, error
             cleaned[key] = ranges
 
+    temperature_bounds_error = _validate_temperature_bounds(cleaned)
+    if temperature_bounds_error:
+        return None, temperature_bounds_error
+
     return cleaned, None
 
 
@@ -136,6 +142,12 @@ def _finite_number(value, label):
     if not math.isfinite(value):
         return None, f"{label} must be finite."
     return value, None
+
+
+def _validate_temperature_bounds(value):
+    if "minTemp" in value and "maxTemp" in value and value["minTemp"] > value["maxTemp"]:
+        return "minTemp cannot be greater than maxTemp."
+    return None
 
 
 def _validate_notification_preferences(value):

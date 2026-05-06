@@ -493,11 +493,17 @@ def normalize_settings(data):
     if not isinstance(safe_ranges, dict):
         safe_ranges = {}
 
-    if "temperature" not in safe_ranges:
-        minimum = normalized.get("minTemp")
-        maximum = normalized.get("maxTemp")
-        if minimum is not None and maximum is not None:
-            safe_ranges["temperature"] = [minimum, maximum]
+    temperature_range = safe_ranges.get("temperature")
+    if isinstance(temperature_range, list) and len(temperature_range) == 2:
+        if normalized.get("minTemp") is None:
+            normalized["minTemp"] = temperature_range[0]
+        if normalized.get("maxTemp") is None:
+            normalized["maxTemp"] = temperature_range[1]
+
+    minimum = normalized.get("minTemp")
+    maximum = normalized.get("maxTemp")
+    if minimum is not None and maximum is not None:
+        safe_ranges["temperature"] = [minimum, maximum]
 
     if "humidity" not in safe_ranges:
         minimum = normalized.get("minHumidity")

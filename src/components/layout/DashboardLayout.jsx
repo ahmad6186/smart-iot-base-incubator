@@ -22,10 +22,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import SettingsIcon from '@mui/icons-material/Settings'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
-import InfoIcon from '@mui/icons-material/Info'
-import EmojiObjectsIcon from '@mui/icons-material/EmojiObjects'
 import GroupIcon from '@mui/icons-material/Group'
 import { logOut } from '../../firebase/auth'
 
@@ -33,13 +30,10 @@ const drawerWidth = 260
 
 const navItems = [
   { label: 'Dashboard', path: '/home', icon: <DashboardIcon /> },
-  { label: 'Features', path: '/features', icon: <EmojiObjectsIcon /> },
   { label: 'Alerts', path: '/alerts', icon: <NotificationsActiveIcon /> },
   { label: 'Reports', path: '/reports', icon: <AssessmentIcon /> },
-  { label: 'Settings', path: '/settings', icon: <SettingsIcon />, adminOnly: true },
   { label: 'User Accounts', path: '/users', icon: <GroupIcon />, adminOnly: true },
   { label: 'Camera', path: '/camera', icon: <CameraAltIcon /> },
-  { label: 'About', path: '/about', icon: <InfoIcon /> },
 ]
 
 function DashboardLayout({ user, profile }) {

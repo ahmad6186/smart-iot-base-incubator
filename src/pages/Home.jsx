@@ -5,13 +5,10 @@ import {
   Card,
   CardContent,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
   Snackbar,
   Alert,
   Stack,
   Chip,
-  Divider,
   CircularProgress,
 } from '@mui/material'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
@@ -25,13 +22,10 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import dayjs from 'dayjs'
 import VitalCard from '../components/dashboard/VitalCard'
 import AlertsPanel from '../components/dashboard/AlertsPanel'
-import ActuatorToggle from '../components/dashboard/ActuatorToggle'
-import SetpointControl from '../components/dashboard/SetpointControl'
+import TemperatureRangeControl from '../components/dashboard/TemperatureRangeControl'
 import AiFeatureCard from '../components/dashboard/AiFeatureCard'
 import useIncubatorData from '../hooks/useIncubatorData'
 import {
-  updateActuator,
-  updateMode,
   updateSetpoints,
 } from '../services/incubatorService'
 import PageHeader from '../components/common/PageHeader'
@@ -49,40 +43,34 @@ const statusFromRange = (value, range) => {
 }
 
 function Home() {
-  const { liveData, actuators, settings, alerts, loading, error } = useIncubatorData()
+  const { liveData, settings, alerts, loading, error } = useIncubatorData()
   const { isAdmin } = useAuth()
   const canControl = Boolean(isAdmin)
-  const [modeSaving, setModeSaving] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
-  const handleModeChange = async (_, value) => {
-    if (!value || !liveData || !canControl) return
-    setModeSaving(true)
-    const result = await updateMode(value)
-    setSnackbar({
-      open: true,
-      message: result.success ? `Mode changed to ${value}` : result.error,
-      severity: result.success ? 'success' : 'error',
-    })
-    setModeSaving(false)
-  }
-
-  const handleActuatorChange = async (name, value) => {
-    if (!actuators || !canControl) return
-    const result = await updateActuator(name, value)
-    setSnackbar({
-      open: true,
-      message: result.success ? `${name} updated` : result.error,
-      severity: result.success ? 'success' : 'error',
-    })
-  }
-
-  const handleSetpointChange = async (field, value) => {
+  const handleTemperatureRangeChange = async ({ minTemp, maxTemp }) => {
     if (!settings || !canControl) return
-    const result = await updateSetpoints({ [field]: Number(value) })
+    if (!Number.isFinite(minTemp) || !Number.isFinite(maxTemp)) {
+      setSnackbar({
+        open: true,
+        message: 'minTemp and maxTemp must be valid numbers',
+        severity: 'error',
+      })
+      return
+    }
+    if (minTemp > maxTemp) {
+      setSnackbar({
+        open: true,
+        message: 'minTemp cannot be greater than maxTemp',
+        severity: 'error',
+      })
+      return
+    }
+
+    const result = await updateSetpoints({ minTemp, maxTemp })
     setSnackbar({
       open: true,
-      message: result.success ? `${field} setpoint saved` : result.error,
+      message: result.success ? 'Temperature limits saved' : result.error,
       severity: result.success ? 'success' : 'error',
     })
   }
@@ -98,6 +86,10 @@ function Home() {
   }
 
   const safeRanges = settings?.safeRanges || {}
+  const minTemp = settings?.minTemp ?? safeRanges.temperature?.[0]
+  const maxTemp = settings?.maxTemp ?? safeRanges.temperature?.[1]
+  const temperatureRange =
+    minTemp !== undefined && maxTemp !== undefined ? [minTemp, maxTemp] : safeRanges.temperature
   const connectionStatus = liveData?.connectionStatus || 'Offline'
   const lastUpdatedText = liveData?.lastUpdated
     ? dayjs(liveData.lastUpdated).format('MMM D, HH:mm:ss')
@@ -107,7 +99,7 @@ function Home() {
     <Stack spacing={3}>
       <PageHeader
         title="Dashboard"
-        subtitle="Live incubator readings, actuator state, and alerts."
+        subtitle="Live incubator readings, temperature limits, and alerts."
         eyebrow="Dashboard"
       />
       {error && (
@@ -187,11 +179,11 @@ function Home() {
             title="Temperature"
             value={liveData?.temperature}
             unit="°C"
-            status={statusFromRange(liveData?.temperature, safeRanges.temperature)}
+            status={statusFromRange(liveData?.temperature, temperatureRange)}
             icon={<ThermostatIcon fontSize="large" />}
             footer="Core incubator temperature"
-            min={safeRanges.temperature?.[0]}
-            max={safeRanges.temperature?.[1]}
+            min={temperatureRange?.[0]}
+            max={temperatureRange?.[1]}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -270,81 +262,7 @@ function Home() {
       </Grid>
 
       <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Stack spacing={2}>
-                <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6">Mode & Controls</Typography>
-                  <Chip label={canControl ? 'Admin' : 'Read only'} color={canControl ? 'primary' : 'default'} size="small" />
-                </Stack>
-                <ToggleButtonGroup
-                  exclusive
-                  value={liveData?.mode ?? null}
-                  onChange={handleModeChange}
-                  size="small"
-                  disabled={modeSaving || !canControl}
-                >
-                  <ToggleButton value="Auto" disabled={modeSaving || !liveData || !canControl}>
-                    Auto
-                  </ToggleButton>
-                  <ToggleButton value="Manual" disabled={modeSaving || !liveData || !canControl}>
-                    Manual
-                  </ToggleButton>
-                </ToggleButtonGroup>
-                <Divider />
-                <Stack spacing={2}>
-                  {!canControl && (
-                    <Alert severity="info">
-                      You have read-only access. Only admins can change actuator states.
-                    </Alert>
-                  )}
-                  <ActuatorToggle
-                    label="Heater"
-                    value={actuators?.heater}
-                    onChange={(value) => handleActuatorChange('heater', value)}
-                    description="Maintain thermal comfort"
-                    disabled={!actuators || !canControl}
-                  />
-                  <ActuatorToggle
-                    label="Fan"
-                    value={actuators?.fan}
-                    onChange={(value) => handleActuatorChange('fan', value)}
-                    description="Air circulation"
-                    disabled={!actuators || !canControl}
-                  />
-                  <ActuatorToggle
-                    label="Humidifier"
-                    value={actuators?.humidifier}
-                    onChange={(value) => handleActuatorChange('humidifier', value)}
-                    description="Humidity regulation"
-                    disabled={!actuators || !canControl}
-                  />
-                  <ActuatorToggle
-                    label="Buzzer"
-                    value={actuators?.buzzer}
-                    onChange={(value) => handleActuatorChange('buzzer', value)}
-                    description="Nurse alerts"
-                    disabled={!actuators || !canControl}
-                  />
-                  <ActuatorToggle
-                    label="Light"
-                    value={actuators?.light}
-                    onChange={(value) => handleActuatorChange('light', value)}
-                    description="Observation lighting"
-                    disabled={!actuators || !canControl}
-                  />
-                  {!actuators && (
-                    <Typography variant="caption" color="text.secondary">
-                      Waiting for actuator state from AWS controller.
-                    </Typography>
-                  )}
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Stack spacing={2}>
@@ -354,20 +272,12 @@ function Home() {
                 </Stack>
                 {settings ? (
                   <>
-                    <SetpointControl
-                      label="Temperature"
+                    <TemperatureRangeControl
                       unit="°C"
-                      value={settings?.temperatureSetpoint}
-                      range={safeRanges.temperature || [0, 100]}
-                      onSave={(value) => handleSetpointChange('temperatureSetpoint', value)}
-                      disabled={!canControl}
-                    />
-                    <SetpointControl
-                      label="Humidity"
-                      unit="%"
-                      value={settings?.humiditySetpoint}
-                      range={safeRanges.humidity || [0, 100]}
-                      onSave={(value) => handleSetpointChange('humiditySetpoint', value)}
+                      minValue={minTemp}
+                      maxValue={maxTemp}
+                      bounds={[0, 100]}
+                      onSave={handleTemperatureRangeChange}
                       disabled={!canControl}
                     />
                     {!canControl && (
@@ -386,12 +296,12 @@ function Home() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <AlertsPanel alerts={alerts} />
         </Grid>
       </Grid>
 
-      <Grid container spacing={2}>
+      {/* <Grid container spacing={2}>
         <Grid item xs={12} md={3}>
           <AiFeatureCard
             title="AI Cry Detection"
@@ -427,7 +337,7 @@ function Home() {
             insight="Connect AWS analytics to generate weekly AI reports."
           />
         </Grid>
-      </Grid>
+      </Grid> */}
 
       <Snackbar
         open={snackbar.open}
