@@ -122,62 +122,7 @@ function Home() {
           {error}
         </Alert>
       )}
-      <Card>
-        <CardContent>
-          <Stack spacing={2}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
-              <Typography variant="h6">Live Snapshot</Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip
-                  icon={<WifiTetheringIcon />}
-                  label={connectionStatus === 'Online' ? 'Connected' : 'Awaiting device'}
-                  color={connectionStatus === 'Online' ? 'success' : 'warning'}
-                  variant={connectionStatus === 'Online' ? 'filled' : 'outlined'}
-                />
-                <Chip label={`Mode: ${liveData?.mode || 'Unknown'}`} variant="outlined" />
-                <Chip
-                  icon={<NotificationsActiveIcon />}
-                  label={`${alerts.length} alerts`}
-                  color="secondary"
-                  variant="outlined"
-                />
-              </Stack>
-            </Stack>
-
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  Last update
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  {lastUpdatedText}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  Controller mode
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  {liveData?.mode || 'Unknown'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  Active alerts
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  {alerts.length}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Stack>
-        </CardContent>
-      </Card>
-      {!liveData && (
-        <Alert severity="info" variant="outlined">
-          No live incubator telemetry yet. Connect your AWS data pipeline to start streaming vitals.
-        </Alert>
-      )}
+     
 
       <Grid container spacing={2} alignItems="stretch">
         <Grid item xs={12}>
