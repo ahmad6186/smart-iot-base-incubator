@@ -11,25 +11,21 @@ import {
   Chip,
   CircularProgress,
 } from '@mui/material'
-import ThermostatIcon from '@mui/icons-material/Thermostat'
-import WaterDropIcon from '@mui/icons-material/WaterDrop'
-import FavoriteIcon from '@mui/icons-material/Favorite'
-import MonitorHeartIcon from '@mui/icons-material/MonitorHeart'
-import HearingIcon from '@mui/icons-material/Hearing'
-import BabyChangingStationIcon from '@mui/icons-material/BabyChangingStation'
+
 import WifiTetheringIcon from '@mui/icons-material/WifiTethering'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
 import dayjs from 'dayjs'
-import VitalCard from '../components/dashboard/VitalCard'
 import AlertsPanel from '../components/dashboard/AlertsPanel'
 import TemperatureRangeControl from '../components/dashboard/TemperatureRangeControl'
-import AiFeatureCard from '../components/dashboard/AiFeatureCard'
 import useIncubatorData from '../hooks/useIncubatorData'
 import {
   updateSetpoints,
 } from '../services/incubatorService'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
+
+const sensitiveLiveDataKeyPattern =
+  /(password|secret|token|api[-_]?key|private[-_]?key|credential|cookie|session|authorization|auth)/i
 
 const statusFromRange = (value, range) => {
   if (!range) return 'normal'
@@ -40,6 +36,24 @@ const statusFromRange = (value, range) => {
     return diff > 1 ? 'critical' : 'warning'
   }
   return 'normal'
+}
+
+const formatLiveDataValue = (key, value) => {
+  if (sensitiveLiveDataKeyPattern.test(key)) return 'Redacted'
+  if (value == null || value === '') return '--'
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '--'
+  if (typeof value === 'string') return value
+
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2)
+    } catch {
+      return String(value)
+    }
+  }
+
+  return String(value)
 }
 
 function Home() {
@@ -94,6 +108,7 @@ function Home() {
   const lastUpdatedText = liveData?.lastUpdated
     ? dayjs(liveData.lastUpdated).format('MMM D, HH:mm:ss')
     : 'Awaiting telemetry from AWS'
+  const liveDataEntries = liveData ? Object.entries(liveData) : []
 
   return (
     <Stack spacing={3}>
@@ -174,92 +189,68 @@ function Home() {
             </Stack>
           </Stack>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Temperature"
-            value={liveData?.temperature}
-            unit="°C"
-            status={statusFromRange(liveData?.temperature, temperatureRange)}
-            icon={<ThermostatIcon fontSize="large" />}
-            footer="Core incubator temperature"
-            min={temperatureRange?.[0]}
-            max={temperatureRange?.[1]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Humidity"
-            value={liveData?.humidity}
-            unit="%"
-            status={statusFromRange(liveData?.humidity, safeRanges.humidity)}
-            icon={<WaterDropIcon fontSize="large" />}
-            footer="Relative humidity"
-            min={safeRanges.humidity?.[0]}
-            max={safeRanges.humidity?.[1]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="SpO₂"
-            value={liveData?.spo2}
-            unit="%"
-            status={statusFromRange(liveData?.spo2, safeRanges.spo2)}
-            icon={<FavoriteIcon fontSize="large" />}
-            footer="Peripheral oxygen saturation"
-            min={safeRanges.spo2?.[0]}
-            max={safeRanges.spo2?.[1]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Heart Rate"
-            value={liveData?.heartRate}
-            unit="bpm"
-            status={statusFromRange(liveData?.heartRate, safeRanges.heartRate)}
-            icon={<MonitorHeartIcon fontSize="large" />}
-            footer="Infant heart rate"
-            min={safeRanges.heartRate?.[0]}
-            max={safeRanges.heartRate?.[1]}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="System Status"
-            value={connectionStatus}
-            status={connectionStatus === 'Online' ? 'normal' : 'critical'}
-            icon={<WifiTetheringIcon fontSize="large" />}
-            footer={`Mode: ${liveData?.mode || 'Unknown'}`}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Noise Level"
-            value={liveData?.noise}
-            unit="dB"
-            status="normal"
-            icon={<HearingIcon fontSize="large" />}
-            footer="Ambient NICU noise"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Cry Detection"
-            value={liveData?.cryStatus}
-            status={liveData?.cryStatus === 'Crying' ? 'warning' : 'normal'}
-            icon={<BabyChangingStationIcon fontSize="large" />}
-            footer="AI powered cry analysis"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <VitalCard
-            title="Baby Presence"
-            value={liveData?.presenceStatus}
-            status={liveData?.presenceStatus === 'Absent' ? 'critical' : 'normal'}
-            icon={<BabyChangingStationIcon fontSize="large" />}
-            footer="Computer vision occupancy"
-          />
-        </Grid>
       </Grid>
+
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
+              <Typography variant="h6">Live Data Fields</Typography>
+              <Chip label={`${liveDataEntries.length} fields`} color="primary" variant="outlined" />
+            </Stack>
+
+            {liveDataEntries.length > 0 ? (
+              <Grid container spacing={1.5}>
+                {liveDataEntries.map(([key, value]) => (
+                  <Grid item xs={12} sm={6} md={4} key={key}>
+                    <Box
+                      sx={{
+                        height: '100%',
+                        minWidth: 0,
+                        p: 1.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        backgroundColor: 'grey.50',
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display: 'block',
+                          fontWeight: 700,
+                          fontFamily: 'monospace',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {key}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 0.5,
+                          fontWeight: 600,
+                          maxHeight: 120,
+                          overflow: 'auto',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {formatLiveDataValue(key, value)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No liveData fields available yet.
+              </Typography>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
