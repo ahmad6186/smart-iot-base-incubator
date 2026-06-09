@@ -12,8 +12,7 @@ import {
   CircularProgress,
 } from '@mui/material'
 
-import WifiTetheringIcon from '@mui/icons-material/WifiTethering'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+
 import dayjs from 'dayjs'
 import AlertsPanel from '../components/dashboard/AlertsPanel'
 import TemperatureRangeControl from '../components/dashboard/TemperatureRangeControl'
@@ -26,6 +25,14 @@ import { useAuth } from '../context/AuthContext'
 
 const sensitiveLiveDataKeyPattern =
   /(password|secret|token|api[-_]?key|private[-_]?key|credential|cookie|session|authorization|auth)/i
+
+const hiddenLiveDataKeys = new Set([
+  'heartRateTrend',
+  'humidityTrend',
+  'spo2Trend',
+  'temperatureTrend',
+  'noiseTrend',
+])
 
 const statusFromRange = (value, range) => {
   if (!range) return 'normal'
@@ -107,8 +114,10 @@ function Home() {
   const connectionStatus = liveData?.connectionStatus || 'Offline'
   const lastUpdatedText = liveData?.lastUpdated
     ? dayjs(liveData.lastUpdated).format('MMM D, HH:mm:ss')
-    : 'Awaiting telemetry from AWS'
-  const liveDataEntries = liveData ? Object.entries(liveData) : []
+    : 'Awaiting telemetry from Firebase'
+  const liveDataEntries = liveData
+    ? Object.entries(liveData).filter(([key]) => !hiddenLiveDataKeys.has(key))
+    : []
 
   return (
     <Stack spacing={3}>
@@ -237,43 +246,7 @@ function Home() {
         </Grid>
       </Grid>
 
-      {/* <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <AiFeatureCard
-            title="AI Cry Detection"
-            description="Computer audition flags prolonged crying episodes."
-            status={liveData?.cryStatus === 'Crying' ? 'Alert' : 'Active'}
-            insight={
-              liveData ? `Latest classification: ${liveData.cryStatus}` : 'Awaiting sensor stream'
-            }
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <AiFeatureCard
-            title="AI Presence Detection"
-            description="Monitors incubator occupancy via thermal + visual sensors."
-            insight={liveData ? `Status: ${liveData.presenceStatus}` : 'Awaiting camera feed'}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <AiFeatureCard
-            title="AI Anomaly Detection"
-            description="Learns normal environmental signatures to surface anomalies."
-            insight={
-              liveData
-                ? 'Monitoring incoming signals for deviations.'
-                : 'Awaiting anomaly detection feed.'
-            }
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <AiFeatureCard
-            title="Weekly AI Summary"
-            description="Generates compliance and stability narratives from reports."
-            insight="Connect AWS analytics to generate weekly AI reports."
-          />
-        </Grid>
-      </Grid> */}
+      
 
       <Snackbar
         open={snackbar.open}
