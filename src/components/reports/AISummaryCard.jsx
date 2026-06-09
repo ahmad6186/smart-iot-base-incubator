@@ -23,7 +23,7 @@ function AISummaryCard({ summaryText, statusLabel, rangeLabel, highlights = [] }
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
             <Stack direction="row" spacing={1} alignItems="center">
               <SmartToyOutlinedIcon color="primary" />
-              <Typography variant="h6">AI Summary</Typography>
+              <Typography variant="h6">Summary</Typography>
             </Stack>
             <Chip label={statusLabel} color={STATUS_COLORS[statusLabel] || 'default'} />
           </Stack>

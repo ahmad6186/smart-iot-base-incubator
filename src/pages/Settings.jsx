@@ -53,6 +53,10 @@ function Settings() {
       safeRanges,
       autoModeEnabled,
     }
+    if (Array.isArray(safeRanges.temperature) && safeRanges.temperature.length === 2) {
+      payload.minTemp = Number(safeRanges.temperature[0])
+      payload.maxTemp = Number(safeRanges.temperature[1])
+    }
     const result = await updateSetpoints(payload)
     setMessage(result.success ? 'Settings updated.' : result.error)
   }

@@ -65,6 +65,8 @@ class ValidationTests(unittest.TestCase):
         payload, error = validate_settings_update(
             {
                 "temperatureSetpoint": 36.5,
+                "minTemp": 35.0,
+                "maxTemp": 38.0,
                 "safeRanges": {"temperature": [35, 38]},
                 "notificationPreferences": {"email": True, "sms": False},
                 "autoModeEnabled": True,
@@ -73,6 +75,20 @@ class ValidationTests(unittest.TestCase):
 
         self.assertIsNone(error)
         self.assertEqual(payload["temperatureSetpoint"], 36.5)
+        self.assertEqual(payload["minTemp"], 35.0)
+        self.assertEqual(payload["maxTemp"], 38.0)
+
+    def test_rejects_non_numeric_temperature_bounds(self):
+        payload, error = validate_settings_update({"minTemp": "35"})
+
+        self.assertIsNone(payload)
+        self.assertEqual(error, "minTemp must be a number.")
+
+    def test_rejects_inverted_temperature_bounds(self):
+        payload, error = validate_settings_update({"minTemp": 39, "maxTemp": 35})
+
+        self.assertIsNone(payload)
+        self.assertEqual(error, "minTemp cannot be greater than maxTemp.")
 
     def test_rejects_unknown_settings_field(self):
         payload, error = validate_settings_update({"debugMode": True})

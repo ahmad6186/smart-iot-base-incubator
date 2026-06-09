@@ -2,12 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import Login from './pages/Login'
 import Home from './pages/Home'
-import Features from './pages/Features'
 import Alerts from './pages/Alerts'
 import Reports from './pages/Reports'
-import Settings from './pages/Settings'
 import Camera from './pages/Camera'
-import About from './pages/About'
 import { onAuthChange } from './firebase/auth'
 import { getCurrentUserProfile } from './services/userService'
 import { Box, CircularProgress } from '@mui/material'
@@ -86,19 +83,13 @@ function App() {
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="dashboard" element={<Home />} />
-          <Route path="features" element={<Features />} />
           <Route path="alerts" element={<Alerts />} />
           <Route path="reports" element={<Reports />} />
-          <Route
-            path="settings"
-            element={isAdmin ? <Settings /> : <Navigate to="/home" replace />}
-          />
           <Route
             path="users"
             element={isAdmin ? <UserManagement /> : <Navigate to="/home" replace />}
           />
           <Route path="camera" element={<Camera />} />
-          <Route path="about" element={<About />} />
         </Route>
         <Route path="*" element={<Navigate to={user ? '/home' : '/login'} replace />} />
       </Routes>
