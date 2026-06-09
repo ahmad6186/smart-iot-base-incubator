@@ -33,6 +33,8 @@ const hiddenLiveDataKeys = new Set([
   'spo2Trend',
   'temperatureTrend',
   'noiseTrend',
+  'timestamp',
+  'id'
 ])
 
 const liveDataHighlightConfig = {
