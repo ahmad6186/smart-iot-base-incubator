@@ -12,6 +12,7 @@ ALLOWED_SETTINGS_KEYS = {
     "safeRanges",
     "notificationPreferences",
     "autoModeEnabled",
+    "babyRemovalPermitted",
 }
 ALLOWED_SAFE_RANGE_KEYS = {"temperature", "humidity", "spo2", "heartRate", "noise"}
 ALLOWED_NOTIFICATION_KEYS = {"email", "sms", "push"}
@@ -114,9 +115,9 @@ def validate_settings_update(payload):
             if error:
                 return None, error
             cleaned[key] = number
-        elif key == "autoModeEnabled":
+        elif key in {"autoModeEnabled", "babyRemovalPermitted"}:
             if not isinstance(value, bool):
-                return None, "autoModeEnabled must be true or false."
+                return None, f"{key} must be true or false."
             cleaned[key] = value
         elif key == "notificationPreferences":
             prefs, error = _validate_notification_preferences(value)

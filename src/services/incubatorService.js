@@ -15,7 +15,13 @@ import { apiRequest, asResult } from './apiClient'
  * - `incubator_alerts/*`     : optional per-alert documents (stream-friendly)
  * - `incubator_reports/*`    : optional per-report documents (stream-friendly)
  */
-const POLL_INTERVAL_MS = Number(import.meta.env?.VITE_INCUBATOR_POLL_INTERVAL_MS || 3000)
+const POLL_INTERVAL_MS = Number(import.meta.env?.VITE_INCUBATOR_POLL_INTERVAL_MS || 30000)
+const MAX_POLL_INTERVAL_MS = Number(import.meta.env?.VITE_INCUBATOR_MAX_POLL_INTERVAL_MS || 120000)
+
+const nextPollInterval = (errorCount) => {
+  if (!errorCount) return POLL_INTERVAL_MS
+  return Math.min(POLL_INTERVAL_MS * 2 ** Math.min(errorCount, 3), MAX_POLL_INTERVAL_MS)
+}
 
 /**
  * Real-time telemetry subscription.
@@ -25,6 +31,7 @@ export const subscribeToIncubatorSnapshot = (callback) => {
   let isActive = true
   let timeoutId
   let controller
+  let errorCount = 0
 
   const poll = async () => {
     if (!isActive) return
@@ -36,13 +43,15 @@ export const subscribeToIncubatorSnapshot = (callback) => {
         signal: controller.signal,
       })
       if (!isActive) return
+      errorCount = 0
       callback({ data: normalizeSnapshot(response?.data), error: null })
     } catch (error) {
       if (!isActive || error.name === 'AbortError') return
+      errorCount += 1
       callback({ data: null, error: error.message })
     } finally {
       if (isActive) {
-        timeoutId = window.setTimeout(poll, POLL_INTERVAL_MS)
+        timeoutId = window.setTimeout(poll, nextPollInterval(errorCount))
       }
     }
   }
@@ -189,6 +198,7 @@ const pollEndpoint = (path, callback) => {
   let isActive = true
   let timeoutId
   let controller
+  let errorCount = 0
 
   const poll = async () => {
     if (!isActive) return
@@ -198,13 +208,15 @@ const pollEndpoint = (path, callback) => {
     try {
       const response = await apiRequest(path, { signal: controller.signal })
       if (!isActive) return
+      errorCount = 0
       callback(response?.data, null)
     } catch (error) {
       if (!isActive || error.name === 'AbortError') return
+      errorCount += 1
       callback(null, error.message)
     } finally {
       if (isActive) {
-        timeoutId = window.setTimeout(poll, POLL_INTERVAL_MS)
+        timeoutId = window.setTimeout(poll, nextPollInterval(errorCount))
       }
     }
   }

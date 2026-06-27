@@ -70,6 +70,7 @@ class ValidationTests(unittest.TestCase):
                 "safeRanges": {"temperature": [35, 38]},
                 "notificationPreferences": {"email": True, "sms": False},
                 "autoModeEnabled": True,
+                "babyRemovalPermitted": False,
             }
         )
 
@@ -77,6 +78,13 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(payload["temperatureSetpoint"], 36.5)
         self.assertEqual(payload["minTemp"], 35.0)
         self.assertEqual(payload["maxTemp"], 38.0)
+        self.assertFalse(payload["babyRemovalPermitted"])
+
+    def test_rejects_non_boolean_baby_removal_permission(self):
+        payload, error = validate_settings_update({"babyRemovalPermitted": "yes"})
+
+        self.assertIsNone(payload)
+        self.assertEqual(error, "babyRemovalPermitted must be true or false.")
 
     def test_rejects_non_numeric_temperature_bounds(self):
         payload, error = validate_settings_update({"minTemp": "35"})

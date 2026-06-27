@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import math
 import os
 import urllib.error
 import urllib.request
@@ -16,6 +17,11 @@ except ImportError:
     firebase_auth = None
     credentials = None
     firestore = None
+
+try:
+    from google.api_core import exceptions as google_api_exceptions
+except ImportError:
+    google_api_exceptions = None
 
 try:
     from .validation import (
@@ -74,6 +80,8 @@ def load_env_file(path):
 
 def create_app():
     app = Flask(__name__)
+
+    register_error_handlers(app)
 
     @app.before_request
     def handle_preflight():
@@ -278,6 +286,48 @@ def failure(message, status):
     return jsonify({"success": False, "error": message}), status
 
 
+def register_error_handlers(app):
+    if google_api_exceptions is None:
+        return
+
+    @app.errorhandler(google_api_exceptions.ResourceExhausted)
+    def handle_resource_exhausted(error):
+        return datastore_error_response(error)
+
+    @app.errorhandler(google_api_exceptions.GoogleAPICallError)
+    def handle_google_api_error(error):
+        return datastore_error_response(error)
+
+
+def datastore_error_response(error):
+    if google_api_exceptions is not None and isinstance(
+        error, google_api_exceptions.ResourceExhausted
+    ):
+        return failure(
+            "Backend datastore quota is exhausted. Please wait before trying again.",
+            429,
+        )
+
+    if google_api_exceptions is not None and isinstance(
+        error,
+        (
+            google_api_exceptions.DeadlineExceeded,
+            google_api_exceptions.ServiceUnavailable,
+        ),
+    ):
+        return failure("Backend datastore is temporarily unavailable.", 503)
+
+    return failure("Backend datastore request failed.", 503)
+
+
+def response_for_datastore_error(error):
+    if google_api_exceptions is None:
+        return None
+    if isinstance(error, google_api_exceptions.GoogleAPICallError):
+        return datastore_error_response(error)
+    return None
+
+
 def get_db():
     global _db_client
 
@@ -356,7 +406,10 @@ def authenticate_request():
         profile = ensure_user_profile(decoded)
     except RuntimeError:
         return failure("Backend Firebase configuration is unavailable.", 503)
-    except Exception:
+    except Exception as error:
+        datastore_response = response_for_datastore_error(error)
+        if datastore_response is not None:
+            return datastore_response
         return failure("Unable to load user profile.", 500)
 
     g.current_user = decoded
@@ -447,7 +500,11 @@ def read_sensor_logs():
         data = document_to_dict(doc)
         if data:
             logs.append(data)
-    logs.sort(key=lambda item: item.get("DateTime") or item.get("timestamp") or "")
+    logs.sort(
+        key=lambda item: timestamp_sort_key_from_fields(
+            item, "DateTime", "timestamp", "createdAt"
+        )
+    )
     return logs
 
 
@@ -464,9 +521,97 @@ def read_first_non_empty_collection(collection_names):
     for collection_name in collection_names:
         docs = [document_to_dict(doc) for doc in db.collection(collection_name).stream()]
         if docs:
-            docs.sort(key=lambda doc: doc.get("createdAt") or "", reverse=True)
+            docs.sort(
+                key=lambda doc: timestamp_sort_key_from_fields(
+                    doc, "createdAt", "timestamp"
+                ),
+                reverse=True,
+            )
             return docs
     return []
+
+
+def timestamp_sort_key_from_fields(item, *field_names):
+    if not isinstance(item, dict):
+        return timestamp_sort_key(None)
+
+    for field_name in field_names:
+        value = item.get(field_name)
+        if value is not None and value != "":
+            return timestamp_sort_key(value)
+    return timestamp_sort_key(None)
+
+
+def timestamp_sort_key(value):
+    timestamp = coerce_timestamp_seconds(value)
+    if timestamp is not None:
+        return (1, timestamp)
+    return (0, "" if value is None else str(value))
+
+
+def coerce_timestamp_seconds(value):
+    if isinstance(value, dt.datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=dt.timezone.utc)
+        return value.timestamp()
+
+    if isinstance(value, dt.date):
+        value = dt.datetime.combine(value, dt.time.min, tzinfo=dt.timezone.utc)
+        return value.timestamp()
+
+    if isinstance(value, dict):
+        seconds = value.get("seconds")
+        if seconds is None:
+            seconds = value.get("_seconds")
+        nanoseconds = value.get("nanoseconds")
+        if nanoseconds is None:
+            nanoseconds = value.get("_nanoseconds", 0)
+
+        seconds = finite_float(seconds)
+        nanoseconds = finite_float(nanoseconds)
+        if seconds is None:
+            return None
+        return seconds + ((nanoseconds or 0) / 1_000_000_000)
+
+    numeric_value = finite_float(value)
+    if numeric_value is not None:
+        if abs(numeric_value) > 9_999_999_999:
+            return numeric_value / 1000
+        return numeric_value
+
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+        try:
+            parsed = dt.datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=dt.timezone.utc)
+        return parsed.timestamp()
+
+    return None
+
+
+def finite_float(value):
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        number = float(value)
+    elif isinstance(value, str):
+        try:
+            number = float(value.strip())
+        except ValueError:
+            return None
+    else:
+        return None
+
+    if not math.isfinite(number):
+        return None
+    return number
 
 
 def normalize_live_data(data):
@@ -533,6 +678,8 @@ def serialize_value(value):
         return value.isoformat()
     if isinstance(value, dt.date):
         return value.isoformat()
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
     return value
 
 

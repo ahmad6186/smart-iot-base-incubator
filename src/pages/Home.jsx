@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Box,
+  Button,
   Grid,
   Card,
   CardContent,
@@ -11,6 +12,8 @@ import {
   Chip,
   CircularProgress,
 } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 
 
 import dayjs from 'dayjs'
@@ -123,6 +126,12 @@ function Home() {
   const { isAdmin } = useAuth()
   const canControl = Boolean(isAdmin)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+  const [babyRemovalPermittedState, setBabyRemovalPermittedState] = useState(false)
+  const [babyRemovalSaving, setBabyRemovalSaving] = useState(false)
+
+  useEffect(() => {
+    setBabyRemovalPermittedState(settings?.babyRemovalPermitted === true)
+  }, [settings?.babyRemovalPermitted])
 
   const handleTemperatureRangeChange = async ({ minTemp, maxTemp }) => {
     if (!settings || !canControl) return
@@ -151,6 +160,25 @@ function Home() {
     })
   }
 
+  const handleBabyRemovalPermissionChange = async () => {
+    if (!settings || !canControl || babyRemovalSaving) return
+
+    const nextValue = !babyRemovalPermittedState
+    setBabyRemovalSaving(true)
+    const result = await updateSetpoints({ babyRemovalPermitted: nextValue })
+    if (result.success) {
+      setBabyRemovalPermittedState(nextValue)
+    }
+    setSnackbar({
+      open: true,
+      message: result.success
+        ? `Baby removal ${nextValue ? 'permitted' : 'blocked'}`
+        : result.error,
+      severity: result.success ? 'success' : 'error',
+    })
+    setBabyRemovalSaving(false)
+  }
+
   const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false })
 
   if (loading) {
@@ -166,6 +194,7 @@ function Home() {
   const maxTemp = settings?.maxTemp ?? safeRanges.temperature?.[1]
   const temperatureRange =
     minTemp !== undefined && maxTemp !== undefined ? [minTemp, maxTemp] : safeRanges.temperature
+  const babyRemovalPermitted = babyRemovalPermittedState
   const connectionStatus = liveData?.connectionStatus || 'Offline'
   const lastUpdatedText = liveData?.lastUpdated
     ? dayjs(liveData.lastUpdated).format('MMM D, HH:mm:ss')
@@ -393,6 +422,41 @@ function Home() {
                         onSave={handleTemperatureRangeChange}
                         disabled={!canControl}
                       />
+                      <Box sx={{ ...panelSx, borderRadius: 1, p: 2 }}>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          spacing={1.5}
+                          justifyContent="space-between"
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                        >
+                          <Stack spacing={0.75}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              Baby Removal
+                            </Typography>
+                            <Chip
+                              label={babyRemovalPermitted ? 'Permitted' : 'Blocked'}
+                              color={babyRemovalPermitted ? 'warning' : 'success'}
+                              variant="outlined"
+                              size="small"
+                              sx={{ alignSelf: 'flex-start' }}
+                            />
+                          </Stack>
+                          <Button
+                            variant={babyRemovalPermitted ? 'outlined' : 'contained'}
+                            color={babyRemovalPermitted ? 'success' : 'warning'}
+                            startIcon={babyRemovalPermitted ? <LockIcon /> : <LockOpenIcon />}
+                            onClick={handleBabyRemovalPermissionChange}
+                            disabled={!canControl || babyRemovalSaving}
+                            sx={{ flexShrink: 0 }}
+                          >
+                            {babyRemovalSaving
+                              ? 'Saving'
+                              : babyRemovalPermitted
+                                ? 'Block Removal'
+                                : 'Permit Removal'}
+                          </Button>
+                        </Stack>
+                      </Box>
                       {!canControl && (
                         <Alert severity="info">
                           View-only mode: contact an administrator to update target ranges.
