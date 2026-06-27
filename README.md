@@ -68,8 +68,13 @@ Start the frontend development server:
 npm run dev:frontend
 ```
 
+Start the baby detection and local alert email service:
+```bash
+npm run dev:detection
+```
+
 The frontend will be available at `http://localhost:5173`. The backend defaults to
-`http://localhost:8000`.
+`http://localhost:8000`. The baby detection service defaults to `http://localhost:5000`.
 
 ### Backend API
 
@@ -111,6 +116,30 @@ monthly buckets and returns chart-ready rows plus summary metrics.
    DETECTION_SERVICE_URL=http://localhost:5000/status
    ```
 3. Restart `npm run dev:backend`. The `Camera` page overlays the presence classification while the ESP32 stream plays.
+
+#### Local alert email setup
+
+The baby detection service can send alert emails locally for new alerts that appear in
+the same Firestore sources used by the Alerts page: new documents in `incubator_alerts`
+or `alerts`, and new entries added to `incubator/alerts.entries` while the service is
+running. Email sending is disabled by default and uses only environment variables; do
+not commit SMTP passwords or app passwords.
+
+Set these variables in your local shell before starting `Baby_Detection/app.py`:
+
+```bash
+export ALERT_EMAIL_ENABLED=true
+export ALERT_SMTP_HOST=smtp.gmail.com
+export ALERT_SMTP_PORT=587
+export ALERT_SMTP_USER=your-email@gmail.com
+export ALERT_SMTP_PASSWORD=your-smtp-app-password
+export ALERT_EMAIL_FROM=your-email@gmail.com
+```
+
+The service reads registered recipients from Firestore `users` documents and emails
+users whose `role` is `Admin` or `Parent`. Recipients are sent with BCC so user email
+addresses are not exposed to other recipients. Existing alert documents are ignored when
+the listener starts to avoid sending old alerts in bulk.
 
 ### Build
 

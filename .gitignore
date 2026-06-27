@@ -19,6 +19,7 @@ __pycache__
 .env
 .env.local
 .env.production
+Baby_Detection/email.env.sh
 serviceAccountKey.json
 firebase-service-account.json
 *-service-account*.json

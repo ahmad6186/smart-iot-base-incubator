@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:frontend": "vite",
     "dev:backend": ".venv/bin/python backend/app.py",
+    "dev:detection": "bash -lc 'source Baby_Detection/env.sh && source Baby_Detection/email.env.sh && .venv/bin/python Baby_Detection/app.py'",
     "backend:test": ".venv/bin/python -m unittest discover -s backend -p 'test_*.py'",
     "build": "vite build",
     "lint": "eslint .",
