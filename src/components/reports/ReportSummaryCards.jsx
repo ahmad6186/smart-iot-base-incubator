@@ -2,7 +2,6 @@ import { Card, CardContent, Chip, Grid, Stack, Typography, Box } from '@mui/mate
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import FavoriteIcon from '@mui/icons-material/Favorite'
-import HearingIcon from '@mui/icons-material/Hearing'
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart'
 import StorageIcon from '@mui/icons-material/Storage'
 import VerifiedIcon from '@mui/icons-material/Verified'
@@ -36,12 +35,6 @@ const summaryCards = (summary) => [
     value: formatValue(summary.avgHeartRate, 'bpm'),
     helper: 'Safe range 100 - 160 bpm',
     icon: <MonitorHeartIcon />,
-  },
-  {
-    title: 'Average Noise Level',
-    value: formatValue(summary.avgNoiseLevel, 'dB'),
-    helper: 'Raw sensor average',
-    icon: <HearingIcon />,
   },
   {
     title: 'Total Logs',

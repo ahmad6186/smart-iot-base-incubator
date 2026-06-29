@@ -124,6 +124,40 @@ class SensorReportTests(unittest.TestCase):
             [alert["label"] for alert in report["alerts"]],
         )
 
+    def test_backend_report_accepts_dashboard_style_status_field_names(self):
+        logs = [
+            {
+                "DateTime": "2026-05-03T00:15:00+00:00",
+                "Noise Level": "58",
+                "Cry Status": False,
+                "Presence Status": "Present",
+            },
+            {
+                "DateTime": "2026-05-03T01:15:00+00:00",
+                "Noise Level": "Quiet",
+                "Cry Status": "Crying",
+                "Presence Status": "Absent",
+            },
+        ]
+
+        report = build_sensor_logs_report(
+            logs,
+            range_key="all",
+            now=dt.datetime(2026, 5, 4, tzinfo=dt.timezone.utc),
+        )
+
+        first_row = report["logs"][0]
+        second_row = report["logs"][1]
+
+        self.assertEqual(first_row["noiseLevel"], 58.0)
+        self.assertIs(first_row["cryStatus"], False)
+        self.assertEqual(first_row["presenceStatus"], "Present")
+        self.assertEqual(second_row["noiseLevel"], "Quiet")
+        self.assertEqual(second_row["cryStatus"], "Crying")
+        self.assertEqual(second_row["presenceStatus"], "Absent")
+        self.assertEqual(report["chartSeries"]["noiseLevel"][0]["value"], 58.0)
+        self.assertIsNone(report["chartSeries"]["noiseLevel"][1]["value"])
+
     def test_backend_report_rejects_invalid_custom_range(self):
         with self.assertRaises(ValueError):
             build_sensor_logs_report(

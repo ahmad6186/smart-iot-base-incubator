@@ -26,7 +26,6 @@ import PageHeader from '../components/common/PageHeader'
 
 dayjs.extend(customParseFormat)
 
-const severityOptions = ['all', 'normal', 'warning', 'critical']
 const alertTypeOptions = [
   'all',
   'CRITICAL_HIGH_TEMP',
@@ -71,7 +70,6 @@ const parseAlertDateTime = (alert) => {
 function Alerts() {
   const [alerts, setAlerts] = useState([])
   const [filters, setFilters] = useState({
-    severity: 'all',
     alertType: 'all',
     date: '',
   })
@@ -94,12 +92,11 @@ function Alerts() {
       .filter((alert) => {
         const alertDateTime = parseAlertDateTime(alert)
         const alertType = getAlertType(alert)
-        const matchSeverity = filters.severity === 'all' || alert.severity === filters.severity
         const matchAlertType = filters.alertType === 'all' || alertType === filters.alertType
         const matchDate =
           !filters.date ||
           (alertDateTime && alertDateTime.isSame(dayjs(filters.date), 'day'))
-        return matchSeverity && matchAlertType && matchDate
+        return matchAlertType && matchDate
       })
       .sort((first, second) => {
         const firstDateTime = parseAlertDateTime(first)
@@ -124,23 +121,7 @@ function Alerts() {
             Filters
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Severity</InputLabel>
-                <Select
-                  label="Severity"
-                  value={filters.severity}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, severity: e.target.value }))}
-                >
-                  {severityOptions.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Alert Type</InputLabel>
                 <Select
@@ -156,7 +137,7 @@ function Alerts() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <TextField
                 label="Date"
                 type="date"
@@ -193,7 +174,6 @@ function Alerts() {
               <TableRow>
                 <TableCell>Message</TableCell>
                 <TableCell>Alert Type</TableCell>
-                <TableCell>Status</TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Time</TableCell>
               </TableRow>
@@ -208,13 +188,6 @@ function Alerts() {
                     <TableCell>{alert.message}</TableCell>
                     <TableCell>{alertType || 'N/A'}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={alert.resolved ? 'Resolved' : 'Open'}
-                        color={alert.resolved ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
                       {alertDateTime ? alertDateTime.format('MMM D, YYYY') : 'N/A'}
                     </TableCell>
                     <TableCell>
@@ -225,7 +198,7 @@ function Alerts() {
               })}
               {!filteredAlerts.length && (
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={4}>
                     <Typography variant="body2" color="text.secondary">
                       No alerts match the selected filters.
                     </Typography>

@@ -213,10 +213,13 @@ def _build_chart_series(rows):
 
 def _build_series_point(row, key):
     timestamp = row.get("timestamp")
+    value = row.get(key)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        value = None
     return {
         "timestamp": timestamp,
         "label": _format_series_label(timestamp),
-        "value": row.get(key),
+        "value": value,
     }
 
 
@@ -528,7 +531,10 @@ def _combined_date_time(log):
 
 
 def _extract_numeric(log, key):
-    value = log.get(key)
+    return _coerce_numeric(log.get(key))
+
+
+def _coerce_numeric(value):
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
@@ -542,11 +548,29 @@ def _extract_numeric(log, key):
 
 
 def _extract_first_numeric(log, keys):
+    return _coerce_numeric(_extract_first_value(log, keys))
+
+
+def _extract_first_value(log, keys):
     for key in keys:
-        value = _extract_numeric(log, key)
-        if value is not None:
+        value = log.get(key)
+        if value not in (None, ""):
+            return value
+
+    normalized_log = {
+        _normalize_field_name(key): value
+        for key, value in log.items()
+        if value not in (None, "")
+    }
+    for key in keys:
+        value = normalized_log.get(_normalize_field_name(key))
+        if value not in (None, ""):
             return value
     return None
+
+
+def _normalize_field_name(key):
+    return re.sub(r"[^a-z0-9]", "", str(key).lower())
 
 
 def _parse_optional_timestamp(value):
@@ -651,7 +675,58 @@ def _serialize_sensor_log(log, timestamp):
         )
         or log.get("Time")
     )
-    noise_level = _extract_first_numeric(log, ("noiseLevel", "noise", "Noise", "noise_level"))
+    noise_value = _extract_first_value(
+        log,
+        (
+            "noiseLevel",
+            "NoiseLevel",
+            "noise",
+            "Noise",
+            "noise_level",
+            "Noise Level",
+            "noise level",
+        ),
+    )
+    noise_level = _coerce_numeric(noise_value)
+    if noise_level is None and noise_value not in (None, ""):
+        noise_level = noise_value
+    cry_status = _extract_first_value(
+        log,
+        (
+            "cryStatus",
+            "CryStatus",
+            "cry_status",
+            "Cry Status",
+            "cry status",
+            "cry",
+            "Cry",
+            "crying",
+            "Crying",
+            "cryDetected",
+            "CryDetected",
+            "Cry Detected",
+        ),
+    )
+    presence_status = _extract_first_value(
+        log,
+        (
+            "presenceStatus",
+            "PresenceStatus",
+            "presence_status",
+            "Presence Status",
+            "presence status",
+            "presence",
+            "Presence",
+            "babyPresence",
+            "BabyPresence",
+            "Baby Presence",
+            "babyPresent",
+            "BabyPresent",
+            "Baby Present",
+            "present",
+            "Present",
+        ),
+    )
 
     row = {
         "id": log.get("id") or log.get("documentId") or timestamp.isoformat(),
@@ -667,10 +742,8 @@ def _serialize_sensor_log(log, timestamp):
         ),
         "weight": _extract_first_numeric(log, ("Weight", "weight")),
         "noiseLevel": noise_level,
-        "cryStatus": log.get("cryStatus") or log.get("CryStatus") or log.get("cry"),
-        "presenceStatus": (
-            log.get("presenceStatus") or log.get("PresenceStatus") or log.get("presence")
-        ),
+        "cryStatus": cry_status,
+        "presenceStatus": presence_status,
     }
     return row
 

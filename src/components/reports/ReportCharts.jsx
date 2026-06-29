@@ -42,14 +42,6 @@ function ReportCharts({ series }) {
               yAxisId: 'right',
               data: series.heartRate,
             },
-            {
-              key: 'noiseLevel',
-              label: 'Noise Level',
-              unit: 'dB',
-              color: '#f97316',
-              yAxisId: 'left',
-              data: series.noiseLevel,
-            },
           ]}
         />
       </Grid>

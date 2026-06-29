@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Alert as MuiAlert,
   Box,
@@ -69,6 +69,17 @@ function Reports() {
   }, [appliedRange])
 
   const rows = report?.logs || []
+  const latestRows = useMemo(() => {
+    return [...rows].sort((first, second) => {
+      const firstTime = dayjs(first.timestamp || first.sourceDateTime).valueOf()
+      const secondTime = dayjs(second.timestamp || second.sourceDateTime).valueOf()
+
+      if (Number.isNaN(firstTime) && Number.isNaN(secondTime)) return 0
+      if (Number.isNaN(firstTime)) return 1
+      if (Number.isNaN(secondTime)) return -1
+      return secondTime - firstTime
+    })
+  }, [rows])
   const alerts = report?.alerts || []
   const summary = report?.summary || {
     totalLogs: 0,
@@ -313,7 +324,7 @@ function Reports() {
               <Stack spacing={2}>
                 <Typography variant="h6">Sensor Logs</Typography>
                 <Box sx={{ overflowX: 'auto' }}>
-                  <Table size="small" sx={{ minWidth: 960 }}>
+                  <Table size="small" sx={{ minWidth: 720 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Date and Time</TableCell>
@@ -321,13 +332,10 @@ function Reports() {
                         <TableCell>Humidity</TableCell>
                         <TableCell>SpO2</TableCell>
                         <TableCell>Heart Rate</TableCell>
-                        <TableCell>Noise Level</TableCell>
-                        <TableCell>Cry Status</TableCell>
-                        <TableCell>Presence Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {rows.map((row) => (
+                      {latestRows.map((row) => (
                         <TableRow key={row.id} hover>
                           <TableCell>
                             <Typography variant="body2" fontWeight={700}>
@@ -338,9 +346,6 @@ function Reports() {
                           <TableCell>{formatCellValue(row.humidity, '%')}</TableCell>
                           <TableCell>{formatCellValue(row.spo2, '%')}</TableCell>
                           <TableCell>{formatCellValue(row.heartRate, 'bpm')}</TableCell>
-                          <TableCell>{formatCellValue(row.noiseLevel, 'dB')}</TableCell>
-                          <TableCell>{row.cryStatus || '--'}</TableCell>
-                          <TableCell>{row.presenceStatus || '--'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
