@@ -65,6 +65,11 @@ class SnapshotEndpointTests(unittest.TestCase):
                         "message": "Alert without a timestamp",
                         "severity": "warning",
                     },
+                    "datetime-alert": {
+                        "message": "Alert with DateTime",
+                        "severity": "warning",
+                        "DateTime": "2026-06-29T10:15:00+00:00",
+                    },
                     "numeric-created-at": {
                         "message": "Alert with a numeric timestamp",
                         "severity": "critical",
@@ -98,7 +103,48 @@ class SnapshotEndpointTests(unittest.TestCase):
         self.assertTrue(payload["success"])
         self.assertEqual(
             [alert["id"] for alert in payload["data"]["alerts"]],
-            ["numeric-created-at", "without-created-at"],
+            ["datetime-alert", "numeric-created-at", "without-created-at"],
+        )
+
+    def test_alert_endpoint_sorts_batched_alerts_by_datetime_field(self):
+        backend_app._db_client = FakeDb(
+            {
+                "incubator": {
+                    "alerts": {
+                        "entries": [
+                            {
+                                "id": "older-alert",
+                                "message": "Older alert",
+                                "DateTime": "2026-06-29T08:00:00+00:00",
+                            },
+                            {
+                                "id": "slash-format-alert",
+                                "message": "Slash format alert",
+                                "DateTime": "29/06/2026 11:26:58",
+                            },
+                            {
+                                "id": "newer-alert",
+                                "message": "Newer alert",
+                                "DateTime": "2026-06-29T09:00:00+00:00",
+                            },
+                        ]
+                    },
+                },
+            }
+        )
+
+        response = self.client.get(
+            "/api/incubator/alerts",
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+        payload = response.get_json()
+
+        self.assertTrue(payload["success"])
+        self.assertEqual(
+            [alert["id"] for alert in payload["data"]],
+            ["slash-format-alert", "newer-alert", "older-alert"],
         )
 
     @unittest.skipIf(

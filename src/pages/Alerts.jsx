@@ -20,27 +20,59 @@ import {
   Divider,
 } from '@mui/material'
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { fetchAlerts } from '../services/incubatorService'
 import PageHeader from '../components/common/PageHeader'
 
+dayjs.extend(customParseFormat)
+
 const severityOptions = ['all', 'normal', 'warning', 'critical']
-const typeOptions = [
+const alertTypeOptions = [
   'all',
-  'High temperature',
-  'Low temperature',
-  'Humidity abnormal',
-  'SpO2 drop',
-  'Baby crying detected',
-  'Baby removed detected',
-  'Anomaly detected',
-  'Sensor failure',
+  'CRITICAL_HIGH_TEMP',
+  'CRITICAL_LOW_TEMP',
+  'BABY_NOT_PRESENT',
+  'CRITICAL_LOW_SPO2',
+  'CRITICAL_LOW_HR',
+  'BABY_MISSING',
 ]
+
+const getAlertDateTime = (alert) =>
+  alert.DateTime || alert.dateTime || alert.createdAt || alert.timestamp || null
+
+const getAlertType = (alert) => alert.alertType || alert.type || ''
+
+const alertDateTimeFormats = [
+  'DD/MM/YYYY HH:mm:ss',
+  'DD/MM/YYYY HH:mm',
+  'DD/MM/YYYY, HH:mm:ss',
+  'DD/MM/YYYY, HH:mm',
+  'D/M/YYYY H:mm:ss',
+  'D/M/YYYY H:mm',
+  'D/M/YYYY, H:mm:ss',
+  'D/M/YYYY, H:mm',
+]
+
+const parseAlertDateTime = (alert) => {
+  const value = getAlertDateTime(alert)
+  if (!value) return null
+
+  if (typeof value === 'string') {
+    for (const format of alertDateTimeFormats) {
+      const parsed = dayjs(value, format, true)
+      if (parsed.isValid()) return parsed
+    }
+  }
+
+  const fallback = dayjs(value)
+  return fallback.isValid() ? fallback : null
+}
 
 function Alerts() {
   const [alerts, setAlerts] = useState([])
   const [filters, setFilters] = useState({
     severity: 'all',
-    type: 'all',
+    alertType: 'all',
     date: '',
   })
   const [error, setError] = useState(null)
@@ -58,14 +90,26 @@ function Alerts() {
   }, [])
 
   const filteredAlerts = useMemo(() => {
-    return alerts.filter((alert) => {
-      const matchSeverity = filters.severity === 'all' || alert.severity === filters.severity
-      const matchType = filters.type === 'all' || alert.type === filters.type
-      const matchDate =
-        !filters.date ||
-        dayjs(alert.createdAt).isSame(dayjs(filters.date), 'day')
-      return matchSeverity && matchType && matchDate
-    })
+    return alerts
+      .filter((alert) => {
+        const alertDateTime = parseAlertDateTime(alert)
+        const alertType = getAlertType(alert)
+        const matchSeverity = filters.severity === 'all' || alert.severity === filters.severity
+        const matchAlertType = filters.alertType === 'all' || alertType === filters.alertType
+        const matchDate =
+          !filters.date ||
+          (alertDateTime && alertDateTime.isSame(dayjs(filters.date), 'day'))
+        return matchSeverity && matchAlertType && matchDate
+      })
+      .sort((first, second) => {
+        const firstDateTime = parseAlertDateTime(first)
+        const secondDateTime = parseAlertDateTime(second)
+
+        if (!firstDateTime && !secondDateTime) return 0
+        if (!firstDateTime) return 1
+        if (!secondDateTime) return -1
+        return secondDateTime.valueOf() - firstDateTime.valueOf()
+      })
   }, [alerts, filters])
 
   return (
@@ -98,13 +142,13 @@ function Alerts() {
             </Grid>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
+                <InputLabel>Alert Type</InputLabel>
                 <Select
-                  label="Type"
-                  value={filters.type}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))}
+                  label="Alert Type"
+                  value={filters.alertType}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, alertType: e.target.value }))}
                 >
-                  {typeOptions.map((option) => (
+                  {alertTypeOptions.map((option) => (
                     <MenuItem key={option} value={option}>
                       {option}
                     </MenuItem>
@@ -125,13 +169,13 @@ function Alerts() {
           </Grid>
           <Divider sx={{ my: 2 }} />
           <Grid container spacing={1}>
-            {typeOptions.slice(1).map((type) => (
-              <Grid item key={type}>
+            {alertTypeOptions.slice(1).map((alertType) => (
+              <Grid item key={alertType}>
                 <Chip
-                  label={type}
-                  variant={filters.type === type ? 'filled' : 'outlined'}
+                  label={alertType}
+                  variant={filters.alertType === alertType ? 'filled' : 'outlined'}
                   color="secondary"
-                  onClick={() => setFilters((prev) => ({ ...prev, type }))}
+                  onClick={() => setFilters((prev) => ({ ...prev, alertType }))}
                 />
               </Grid>
             ))}
@@ -148,31 +192,40 @@ function Alerts() {
             <TableHead>
               <TableRow>
                 <TableCell>Message</TableCell>
+                <TableCell>Alert Type</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Date</TableCell>
                 <TableCell>Time</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredAlerts.map((alert) => (
-                <TableRow key={alert.id}>
-                  <TableCell>{alert.message}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={alert.resolved ? 'Resolved' : 'Open'}
-                      color={alert.resolved ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {alert.createdAt
-                      ? dayjs(alert.createdAt).format('MMM D, HH:mm')
-                      : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredAlerts.map((alert) => {
+                const alertDateTime = parseAlertDateTime(alert)
+                const alertType = getAlertType(alert)
+
+                return (
+                  <TableRow key={alert.id}>
+                    <TableCell>{alert.message}</TableCell>
+                    <TableCell>{alertType || 'N/A'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={alert.resolved ? 'Resolved' : 'Open'}
+                        color={alert.resolved ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {alertDateTime ? alertDateTime.format('MMM D, YYYY') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {alertDateTime ? alertDateTime.format('HH:mm') : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
               {!filteredAlerts.length && (
                 <TableRow>
-                  <TableCell colSpan={3}>
+                  <TableCell colSpan={5}>
                     <Typography variant="body2" color="text.secondary">
                       No alerts match the selected filters.
                     </Typography>

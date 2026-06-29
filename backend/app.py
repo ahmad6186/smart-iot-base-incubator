@@ -58,6 +58,25 @@ INCUBATOR_COLLECTION = "incubator"
 USER_COLLECTION = "users"
 ALERT_COLLECTIONS = ("incubator_alerts", "alerts")
 REPORT_COLLECTIONS = ("incubator_reports", "reports")
+ALERT_TIMESTAMP_FIELDS = ("DateTime", "dateTime", "createdAt", "timestamp")
+SLASH_DATETIME_FORMATS = (
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%d/%m/%Y, %H:%M:%S",
+    "%d/%m/%Y, %H:%M",
+    "%d/%m/%Y %I:%M:%S %p",
+    "%d/%m/%Y %I:%M %p",
+    "%d/%m/%Y, %I:%M:%S %p",
+    "%d/%m/%Y, %I:%M %p",
+    "%m/%d/%Y %H:%M:%S",
+    "%m/%d/%Y %H:%M",
+    "%m/%d/%Y, %H:%M:%S",
+    "%m/%d/%Y, %H:%M",
+    "%m/%d/%Y %I:%M:%S %p",
+    "%m/%d/%Y %I:%M %p",
+    "%m/%d/%Y, %I:%M:%S %p",
+    "%m/%d/%Y, %I:%M %p",
+)
 
 _db_client = None
 
@@ -482,8 +501,8 @@ def build_incubator_snapshot():
 def read_alerts():
     batched = read_batched_entries("alerts")
     if batched:
-        return batched
-    return read_first_non_empty_collection(ALERT_COLLECTIONS)
+        return sort_entries_by_timestamp_fields(batched, ALERT_TIMESTAMP_FIELDS)
+    return read_first_non_empty_collection(ALERT_COLLECTIONS, ALERT_TIMESTAMP_FIELDS)
 
 
 def read_reports():
@@ -516,19 +535,23 @@ def read_batched_entries(document_id):
     return []
 
 
-def read_first_non_empty_collection(collection_names):
+def read_first_non_empty_collection(
+    collection_names, sort_fields=("createdAt", "timestamp")
+):
     db = get_db()
     for collection_name in collection_names:
         docs = [document_to_dict(doc) for doc in db.collection(collection_name).stream()]
         if docs:
-            docs.sort(
-                key=lambda doc: timestamp_sort_key_from_fields(
-                    doc, "createdAt", "timestamp"
-                ),
-                reverse=True,
-            )
-            return docs
+            return sort_entries_by_timestamp_fields(docs, sort_fields)
     return []
+
+
+def sort_entries_by_timestamp_fields(entries, field_names):
+    return sorted(
+        entries,
+        key=lambda item: timestamp_sort_key_from_fields(item, *field_names),
+        reverse=True,
+    )
 
 
 def timestamp_sort_key_from_fields(item, *field_names):
@@ -588,11 +611,22 @@ def coerce_timestamp_seconds(value):
         try:
             parsed = dt.datetime.fromisoformat(normalized)
         except ValueError:
-            return None
+            parsed = parse_slash_datetime(normalized)
+            if parsed is None:
+                return None
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=dt.timezone.utc)
         return parsed.timestamp()
 
+    return None
+
+
+def parse_slash_datetime(value):
+    for date_format in SLASH_DATETIME_FORMATS:
+        try:
+            return dt.datetime.strptime(value, date_format)
+        except ValueError:
+            continue
     return None
 
 
