@@ -59,6 +59,7 @@ USER_COLLECTION = "users"
 ALERT_COLLECTIONS = ("incubator_alerts", "alerts")
 REPORT_COLLECTIONS = ("incubator_reports", "reports")
 ALERT_TIMESTAMP_FIELDS = ("DateTime", "dateTime", "createdAt", "timestamp")
+DEFAULT_SENSOR_LOG_COLLECTIONS = ("SensorLogs", "sensorLogs", "sensor_logs", "sensorlogs")
 SLASH_DATETIME_FORMATS = (
     "%d/%m/%Y %H:%M:%S",
     "%d/%m/%Y %H:%M",
@@ -515,16 +516,32 @@ def read_reports():
 def read_sensor_logs():
     db = get_db()
     logs = []
-    for doc in db.collection("SensorLogs").stream():
-        data = document_to_dict(doc)
-        if data:
-            logs.append(data)
+    for collection_name in sensor_log_collections():
+        collection_logs = []
+        for doc in db.collection(collection_name).stream():
+            data = document_to_dict(doc)
+            if data:
+                collection_logs.append(data)
+        if collection_logs:
+            logs = collection_logs
+            break
     logs.sort(
         key=lambda item: timestamp_sort_key_from_fields(
             item, "DateTime", "timestamp", "createdAt"
         )
     )
     return logs
+
+
+def sensor_log_collections():
+    configured = os.environ.get("SENSOR_LOG_COLLECTIONS", "")
+    if configured:
+        collections = tuple(
+            collection.strip() for collection in configured.split(",") if collection.strip()
+        )
+        if collections:
+            return collections
+    return DEFAULT_SENSOR_LOG_COLLECTIONS
 
 
 def read_batched_entries(document_id):

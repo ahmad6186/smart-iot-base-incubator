@@ -158,6 +158,49 @@ class SensorReportTests(unittest.TestCase):
         self.assertEqual(report["chartSeries"]["noiseLevel"][0]["value"], 58.0)
         self.assertIsNone(report["chartSeries"]["noiseLevel"][1]["value"])
 
+    def test_backend_report_accepts_current_firestore_sensor_log_shape(self):
+        logs = [
+            {
+                "Bodytemp": 31.74601,
+                "DateTime": "29/06/2026 15:48:12",
+                "Weight": 0,
+                "heartRate": 0,
+                "humidity": 56.3,
+                "spo2": 0,
+                "temperature": 31.6,
+            },
+        ]
+
+        report = build_sensor_logs_report(
+            logs,
+            range_key="all",
+            now=dt.datetime(2026, 6, 29, 16, tzinfo=dt.timezone.utc),
+        )
+
+        self.assertEqual(report["summary"]["totalLogs"], 1)
+        self.assertEqual(report["logs"][0]["timestamp"], "2026-06-29T15:48:12+00:00")
+        self.assertEqual(report["logs"][0]["temperature"], 31.6)
+        self.assertEqual(report["logs"][0]["humidity"], 56.3)
+        self.assertEqual(report["logs"][0]["spo2"], 0.0)
+        self.assertEqual(report["logs"][0]["heartRate"], 0.0)
+
+    def test_all_entries_does_not_filter_out_future_local_timestamp_strings(self):
+        logs = [
+            {
+                "DateTime": "29/06/2026 15:48:12",
+                "temperature": 31.6,
+            },
+        ]
+
+        report = build_sensor_logs_report(
+            logs,
+            range_key="all",
+            now=dt.datetime(2026, 6, 29, 11, tzinfo=dt.timezone.utc),
+        )
+
+        self.assertEqual(report["summary"]["totalLogs"], 1)
+        self.assertIsNone(report["windowEnd"])
+
     def test_backend_report_rejects_invalid_custom_range(self):
         with self.assertRaises(ValueError):
             build_sensor_logs_report(

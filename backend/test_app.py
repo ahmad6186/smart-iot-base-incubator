@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import app as backend_app
 
@@ -146,6 +147,55 @@ class SnapshotEndpointTests(unittest.TestCase):
             [alert["id"] for alert in payload["data"]],
             ["slash-format-alert", "newer-alert", "older-alert"],
         )
+
+    def test_reports_use_sensor_log_collection_fallback_names(self):
+        backend_app._db_client = FakeDb(
+            {
+                "sensorLogs": {
+                    "sensor-log": {
+                        "DateTime": "2026-06-29T09:00:00+00:00",
+                        "temperature": 36.8,
+                    },
+                },
+            }
+        )
+
+        response = self.client.get(
+            "/api/incubator/reports?rangeKey=all",
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+        payload = response.get_json()
+
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["data"]["summary"]["totalLogs"], 1)
+        self.assertEqual(payload["data"]["logs"][0]["temperature"], 36.8)
+
+    def test_reports_can_use_configured_sensor_log_collection_names(self):
+        backend_app._db_client = FakeDb(
+            {
+                "Readings": {
+                    "sensor-log": {
+                        "DateTime": "2026-06-29T09:00:00+00:00",
+                        "temperature": 36.8,
+                    },
+                },
+            }
+        )
+
+        with patch.dict(backend_app.os.environ, {"SENSOR_LOG_COLLECTIONS": "Readings"}):
+            response = self.client.get(
+                "/api/incubator/reports?rangeKey=all",
+                headers={"Authorization": "Bearer test-token"},
+            )
+
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+        payload = response.get_json()
+
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["data"]["summary"]["totalLogs"], 1)
+        self.assertEqual(payload["data"]["logs"][0]["temperature"], 36.8)
 
     @unittest.skipIf(
         backend_app.google_api_exceptions is None,

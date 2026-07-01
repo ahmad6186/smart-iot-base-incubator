@@ -28,17 +28,20 @@ const resolveRangeWindow = (rangeKey, customFrom, customTo) => {
     : 'last7'
   const now = dayjs()
   let start = null
-  let end = now
+  let end = null
   let label = 'All entries'
 
   if (selectedRange === 'last7') {
     start = now.subtract(6, 'day').startOf('day')
+    end = now
     label = 'Last 7 days'
   } else if (selectedRange === 'today') {
     start = now.startOf('day')
+    end = now
     label = 'Today'
   } else if (selectedRange === 'last30') {
     start = now.subtract(29, 'day').startOf('day')
+    end = now
     label = 'Last 30 days'
   } else if (selectedRange === 'custom') {
     if (!customFrom || !customTo) {

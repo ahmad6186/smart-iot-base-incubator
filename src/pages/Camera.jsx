@@ -4,7 +4,7 @@ import PageHeader from '../components/common/PageHeader'
 import { fetchPresenceStatus } from '../services/detectionService'
 
 // ESP32 STREAM URL (IMPORTANT: use :81/stream)
-const CAMERA_STREAM_URL = 'http://192.168.0.109:81/stream'
+const CAMERA_STREAM_URL = 'http://10.216.221.176:81/stream'
 const DETECTION_POLL_INTERVAL_MS = 3000
 
 function Camera() {

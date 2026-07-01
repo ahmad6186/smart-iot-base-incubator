@@ -67,18 +67,21 @@ def _resolve_range_window(range_key, start_at, end_at, now):
     selected_range = range_key if range_key in RANGE_KEYS else "last7"
     current = _ensure_utc(now or dt.datetime.now(dt.timezone.utc))
     start = None
-    end = current
+    end = None
     label = "All entries"
 
     if selected_range == "last7":
+        end = current
         start = (current - dt.timedelta(days=6)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
         label = "Last 7 days"
     elif selected_range == "today":
+        end = current
         start = current.replace(hour=0, minute=0, second=0, microsecond=0)
         label = "Today"
     elif selected_range == "last30":
+        end = current
         start = (current - dt.timedelta(days=29)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
@@ -93,8 +96,6 @@ def _resolve_range_window(range_key, start_at, end_at, now):
         if end < start:
             raise ValueError("The end date/time must be after the start date/time.")
         label = f"{_format_range_datetime(start)} to {_format_range_datetime(end)}"
-    elif selected_range == "all":
-        end = current
 
     return {
         "rangeKey": selected_range,
@@ -733,7 +734,20 @@ def _serialize_sensor_log(log, timestamp):
         "timestamp": timestamp.isoformat(),
         "dateTime": timestamp.isoformat(),
         "sourceDateTime": source_date_time,
-        "temperature": _extract_first_numeric(log, ("temperature", "Temperature", "temp")),
+        "temperature": _extract_first_numeric(
+            log,
+            (
+                "temperature",
+                "Temperature",
+                "temp",
+                "Bodytemp",
+                "bodyTemp",
+                "bodytemp",
+                "BodyTemp",
+                "body_temp",
+                "Body Temp",
+            ),
+        ),
         "humidity": _extract_first_numeric(log, ("humidity", "Humidity")),
         "spo2": _extract_first_numeric(log, ("spo2", "SpO2", "SpO₂", "SPO2")),
         "heartRate": _extract_first_numeric(
